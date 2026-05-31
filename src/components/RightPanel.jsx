@@ -185,6 +185,9 @@ export default function RightPanel({
   onFlooringChange,
   onGraphicFileChange,
   onGraphicClear,
+  onExportPdf,
+  isExportingPdf,
+  exportStatus,
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const [openSectionId, setOpenSectionId] = useState('booth-selection')
@@ -351,9 +354,18 @@ export default function RightPanel({
             onOpen={toggleSection}
           >
             <p className="panel-note">
-              A clean JPG preview export will be wired up after the scene and models are final.
+              Export a first-pass booth summary PDF with perspective, front, and top
+              preview images plus the current booth details.
             </p>
-            <PlaceholderButton>Export JPG preview</PlaceholderButton>
+            <button
+              type="button"
+              className="primary-button export-button"
+              disabled={isExportingPdf}
+              onClick={onExportPdf}
+            >
+              {isExportingPdf ? 'Exporting PDF...' : 'Export PDF summary'}
+            </button>
+            {exportStatus && <p className="export-status">{exportStatus}</p>}
           </Section>
 
           <Section

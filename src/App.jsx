@@ -11,6 +11,7 @@ import CounterPlacementControls from './components/CounterPlacementControls.jsx'
 import CropModal from './components/CropModal.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import WelcomeModal from './components/WelcomeModal.jsx'
+import { createBoothSummaryPdf } from './utils/exportPdf.js'
 
 const ASPECT_RATIO_TOLERANCE = 0.01
 const COUNTER_MOVE_STEP = 0.1
@@ -83,6 +84,7 @@ function createDefaultAccessoryPlacements(booth) {
 
 export default function App() {
   const defaultBooth = getDefaultBooth()
+  const sceneRef = useRef(null)
   const [selectedSize, setSelectedSize] = useState(defaultBooth.size)
   const [selectedBoothId, setSelectedBoothId] = useState(defaultBooth.id)
   const [selectedFlooringId, setSelectedFlooringId] = useState(defaultFlooringId)
@@ -94,6 +96,8 @@ export default function App() {
   const [graphicErrors, setGraphicErrors] = useState(emptyGraphicUploads)
   const [cropRequest, setCropRequest] = useState(null)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [exportStatus, setExportStatus] = useState('')
   const graphicUploadsRef = useRef(graphicUploads)
 
   const availableBooths = useMemo(() => getBoothsBySize(selectedSize), [selectedSize])
@@ -352,6 +356,40 @@ export default function App() {
     }))
   }
 
+  async function exportPdf() {
+    if (!sceneRef.current || isExportingPdf) {
+      return
+    }
+
+    setIsExportingPdf(true)
+    setExportStatus('Preparing PDF views...')
+
+    try {
+      await new Promise((resolve) => {
+        requestAnimationFrame(resolve)
+      })
+      await new Promise((resolve) => {
+        requestAnimationFrame(resolve)
+      })
+
+      const captures = await sceneRef.current.capturePresetViews()
+
+      setExportStatus('Building PDF...')
+      await createBoothSummaryPdf({
+        booth: selectedBooth,
+        flooring: selectedFlooring,
+        graphicUploads,
+        captures,
+      })
+      setExportStatus('PDF downloaded.')
+    } catch (error) {
+      console.error('Unable to export PDF.', error)
+      setExportStatus('Unable to export PDF. Please try again.')
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
   useEffect(() => {
     graphicUploadsRef.current = graphicUploads
   }, [graphicUploads])
@@ -366,6 +404,7 @@ export default function App() {
     <main className="app-shell">
       <section className="scene-layer" aria-label="3D rental exhibit preview">
         <CanvasScene
+          ref={sceneRef}
           booth={selectedBooth}
           flooring={selectedFlooring}
           graphicUploads={graphicUploads}
@@ -373,6 +412,8 @@ export default function App() {
           selectedAccessoryId={selectedAccessoryId}
           onAccessorySelect={setSelectedAccessoryId}
           onSceneDeselect={() => setSelectedAccessoryId(null)}
+          hideSelectionOutline={isExportingPdf}
+          hideGrid={isExportingPdf}
         />
       </section>
 
@@ -381,14 +422,17 @@ export default function App() {
         <p>Scroll wheel: zoom in / out</p>
       </div>
 
-      {activeCounter && selectedAccessoryId === activeCounter.id && !isWelcomeOpen && (
-        <CounterPlacementControls
-          accessoryName={activeCounter.name}
-          onMove={moveCounter}
-          onRotate={rotateCounter}
-          onReset={resetCounterPlacement}
-        />
-      )}
+      {activeCounter &&
+        selectedAccessoryId === activeCounter.id &&
+        !isWelcomeOpen &&
+        !isExportingPdf && (
+          <CounterPlacementControls
+            accessoryName={activeCounter.name}
+            onMove={moveCounter}
+            onRotate={rotateCounter}
+            onReset={resetCounterPlacement}
+          />
+        )}
 
       <RightPanel
         boothSizes={boothSizes}
@@ -404,6 +448,9 @@ export default function App() {
         onFlooringChange={setSelectedFlooringId}
         onGraphicFileChange={handleGraphicFile}
         onGraphicClear={clearGraphicUpload}
+        onExportPdf={exportPdf}
+        isExportingPdf={isExportingPdf}
+        exportStatus={exportStatus}
       />
 
       {isWelcomeOpen && (

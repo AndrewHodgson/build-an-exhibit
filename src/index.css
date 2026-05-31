@@ -368,6 +368,12 @@ dd {
   box-shadow: 0 10px 20px rgba(33, 70, 112, 0.18);
 }
 
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  box-shadow: none;
+}
+
 .layout-card-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -677,6 +683,17 @@ dd {
   border-style: dashed;
   background: #f8fafc;
   color: #7a8491;
+}
+
+.export-button {
+  width: 100%;
+}
+
+.export-status {
+  margin: 8px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .text-button {

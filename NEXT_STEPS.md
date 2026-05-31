@@ -17,6 +17,7 @@ Currently working:
 * JPG upload/crop previews for the backwall and counter graphic materials
 * counter selection, orange object-level outline, movement, rotation, and reset
 * selected-only custom SVG counter controller using `public/controller.svg`
+* refined one-page client-side PDF export using jsPDF
 
 Graphic recommendations:
 
@@ -31,6 +32,7 @@ Graphic recommendations:
 * No bounds limits exist for counter movement yet.
 * No collision detection exists yet.
 * No optional furniture/accessory system exists yet.
+* PDF export is a refined first working version, not a final polished proposal output.
 * No JPG export workflow exists yet.
 * No contact/follow-up form or submission workflow exists yet.
 * Graphic previews are browser-only and are not production artwork validation.
@@ -40,13 +42,15 @@ Graphic recommendations:
 * Counter/controller/outline behavior should be retested when additional accessories are introduced.
 * Continue mobile testing as the right panel, crop modal, and controller become denser.
 * Preserve the current material targeting; do not globally override GLB materials.
+* PDF export includes the SourceOne SVG logo, captures perspective/front/top views at 4:3, uses a white export background, hides grid/selection/controller UI during capture, and uses size-specific camera presets plus contain-style image placement for 10x10 and 10x20 booths.
+* PDF export should be retested as model complexity grows.
 * The Vite production build may warn about large chunks as Three.js dependencies grow.
 
 ## Recommended Next Tasks
 
 1. Add an optional furniture/accessory system.
 2. Add movement bounds for the included counter and future furniture.
-3. Add the JPG export workflow.
+3. Continue PDF export polish or add a dedicated JPG export workflow if still needed.
 4. Add the contact/follow-up form.
 5. Replace temporary BM101 model references with real booth-specific GLBs.
 6. Refine right panel content and booth details.

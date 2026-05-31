@@ -30,6 +30,7 @@ Use Build-a-Booth only as a visual/layout/code reference unless the user explici
 * Drei
 * Three.js
 * react-easy-crop
+* jsPDF
 
 Key files:
 
@@ -40,6 +41,7 @@ Key files:
 * `src/components/CounterPlacementControls.jsx` - custom SVG counter controller overlay
 * `src/components/CropModal.jsx` - fixed-aspect image crop workflow
 * `src/components/SourceOneLogo.jsx` - reusable SourceOne SVG logo component
+* `src/utils/exportPdf.js` - client-side booth summary PDF generator
 * `src/utils/cropImage.js` - browser crop output helper
 * `data/booths.js` - central booth/accessory config
 * `data/flooring.js` - central carpet/flooring config
@@ -83,7 +85,7 @@ Current and near-term MVP scope:
 6. Upload and crop a counter graphic preview.
 7. Select and adjust the included counter.
 8. Eventually add optional furniture/accessories.
-9. Eventually export a clean JPG preview.
+9. Export a first-pass booth summary PDF.
 10. Eventually submit a follow-up request to SourceOne Exhibitor Services.
 
 ## Out Of Scope Until Requested
@@ -94,6 +96,7 @@ Do not add these unless specifically requested:
 * email confirmation
 * captcha
 * final JPG export
+* final polished proposal PDF
 * database/storage
 * WordPress deployment
 * all 20 real booth models
@@ -104,7 +107,6 @@ Do not add these unless specifically requested:
 * pricing
 * user accounts
 * production artwork validation
-* PDF export
 
 ## Booth Naming And Config
 
@@ -188,7 +190,7 @@ Current section status:
 * Graphics is wired to backwall/counter JPG upload and crop behavior.
 * Furniture is placeholder-only.
 * Carpet & Flooring is wired to flooring swatches.
-* Export is placeholder-only.
+* Export creates a first-pass booth summary PDF.
 * Contact SourceOne is placeholder-only.
 
 Mobile behavior:
@@ -412,6 +414,72 @@ Used in:
 * mobile top bar
 * right panel header
 
+## PDF Export
+
+The app has a first-pass client-side PDF export.
+
+PDF utility:
+
+`src/utils/exportPdf.js`
+
+Library:
+
+`jsPDF`
+
+Current export entry point:
+
+* The Export section in `src/components/RightPanel.jsx`.
+* The export action is coordinated in `src/App.jsx`.
+* `src/components/CanvasScene.jsx` exposes an imperative `capturePresetViews()` API through a ref.
+
+Captured views:
+
+1. Perspective
+2. Front
+3. Top
+
+Current PDF contents:
+
+* SourceOne Events logo in the top-left header, using `public/images/SourceOne-Logo-RGB.svg`
+* large perspective view image on the left
+* smaller front view image on the right top
+* smaller top view image on the right bottom
+* booth name
+* booth code
+* booth description
+* booth size
+* booth type
+* carpet/flooring selection
+* included accessories
+* backwall graphic status, uploaded or default
+* counter graphic status, uploaded or default
+* additional furniture, currently None
+
+Export behavior:
+
+* Uses the current booth, flooring, included counter placement, and uploaded graphic textures.
+* Temporarily hides the custom SVG controller and orange selected outline from captured images.
+* Temporarily hides the Three.js scene grid from captured images.
+* Temporarily moves the existing Three.js camera through preset export views.
+* Temporarily uses a plain white export clear background so the normal CSS gradient is not part of exported images.
+* Temporarily renders captures at `1200 × 900`, a 4:3 aspect ratio, before restoring the live canvas size and pixel ratio.
+* Hides grid helpers imperatively during capture as a fallback in addition to the React export-mode grid toggle.
+* Restores the user's camera position, camera orientation, camera up vector, OrbitControls target, and normal clear background after capture.
+* Does not change the normal app gradient, grid, camera controls, model placement, or material setup.
+* The PDF is designed as a one-page, portrait, letter-size 8.5 x 11 layout.
+* 10x10 and 10x20 use separate export camera presets; 10x10 presets are tighter and 10x20 presets pull back enough to fit the wider booth/floor.
+* Images are placed into the PDF with contain-style sizing to avoid cropping wide views.
+* PDF image placement uses reduced inner padding so captures sit larger inside their bordered frames.
+
+Known export limitations:
+
+* This is a first working PDF, not a final proposal template.
+* No server storage or email flow exists.
+* No PDF export gating or form workflow exists.
+* Export capture quality currently uses a fixed `1200 × 900` render size.
+* Optional furniture is not included yet because optional furniture does not exist yet.
+* The logo SVG is converted to a PNG data URL in the browser before insertion into the PDF for compatibility.
+
 ## Performance Settings
 
 Current performance-related settings:
@@ -426,6 +494,7 @@ Current performance-related settings:
 * Flooring texture clones are disposed on cleanup.
 * Uploaded textures are disposed/revoked when replaced or cleared.
 * GLB and flooring textures are preloaded.
+* PDF export captures preset views on demand and restores the live camera afterward.
 
 ## Current Known Limitations
 
@@ -434,7 +503,8 @@ Current performance-related settings:
 * Optional furniture has not been implemented.
 * Counter/furniture bounds limits are not implemented.
 * Collision detection is not implemented.
-* Export JPG workflow is not implemented.
+* Final JPG export workflow is not implemented.
+* PDF export exists only as a first-pass booth summary.
 * Contact/follow-up form is not implemented.
 * No database or storage exists.
 * No production artwork validation exists.

@@ -11,6 +11,8 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  forwardRef,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -18,10 +20,12 @@ import {
 import {
   Box3,
   ClampToEdgeWrapping,
+  Color,
   MeshStandardMaterial,
   RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
+  Vector2,
   Vector3,
 } from 'three'
 import { flooringTexturePreloadPaths } from '../../data/flooring.js'
@@ -37,6 +41,9 @@ const SCENE_GRID_DIVISIONS = 24
 const SCENE_GRID_Y = -FLOOR_THICKNESS - 0.006
 const SELECTED_OUTLINE_COLOR = '#f97316'
 const SELECTED_OUTLINE_PADDING = 0.035
+const EXPORT_BACKGROUND_COLOR = '#ffffff'
+const EXPORT_CAPTURE_WIDTH = 1200
+const EXPORT_CAPTURE_HEIGHT = 900
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
@@ -62,10 +69,11 @@ function useIsMobileViewport() {
 function SceneLights() {
   return (
     <>
-      <ambientLight intensity={0.65} />
-      <hemisphereLight args={['#ffffff', '#c5ced8', 0.82]} />
-      <directionalLight position={[4, 7, 5]} intensity={1.25} castShadow />
-      <directionalLight position={[-5, 3, -4]} intensity={0.3} />
+      <ambientLight intensity={0.82} />
+      <hemisphereLight args={['#ffffff', '#d6dee8', 1.05]} />
+      <directionalLight position={[4, 7, 5]} intensity={1.45} castShadow />
+      <directionalLight position={[-5, 3, -4]} intensity={0.38} />
+      <directionalLight position={[0, 3.5, 6]} intensity={0.28} />
     </>
   )
 }
@@ -129,6 +137,132 @@ function SceneGrid() {
   )
 }
 
+function waitForAnimationFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(resolve)
+  })
+}
+
+function getExportCameraViews(boothSize) {
+  const isWide = boothSize === '10x20'
+
+  return [
+    {
+      id: 'perspective',
+      label: 'Perspective View',
+      position: isWide ? [3.7, 2.45, 7.35] : [2.05, 2.0, 5.35],
+      target: isWide ? [0, 0.92, -0.08] : [0, 0.95, -0.05],
+      up: [0, 1, 0],
+    },
+    {
+      id: 'front',
+      label: 'Front View',
+      position: isWide ? [0, 1.16, 8.05] : [0, 1.12, 5.05],
+      target: [0, 1.05, 0],
+      up: [0, 1, 0],
+    },
+    {
+      id: 'top',
+      label: 'Top View',
+      position: isWide ? [0, 7.45, 0.001] : [0, 4.85, 0.001],
+      target: [0, 0, 0],
+      up: [0, 0, -1],
+    },
+  ]
+}
+
+function SceneCaptureBridge({ boothSize, captureRef }) {
+  const camera = useThree((state) => state.camera)
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+  const controls = useThree((state) => state.controls)
+  const invalidate = useThree((state) => state.invalidate)
+
+  useImperativeHandle(
+    captureRef,
+    () => ({
+      async capturePresetViews() {
+        const originalPosition = camera.position.clone()
+        const originalQuaternion = camera.quaternion.clone()
+        const originalUp = camera.up.clone()
+        const originalAspect = camera.aspect
+        const originalTarget = controls?.target?.clone()
+        const originalSize = gl.getSize(new Vector2())
+        const originalPixelRatio = gl.getPixelRatio()
+        const originalClearColor = gl.getClearColor(new Color()).clone()
+        const originalClearAlpha = gl.getClearAlpha()
+        const gridHelpers = []
+        const captures = []
+
+        try {
+          scene.traverse((object) => {
+            if (object.type === 'GridHelper') {
+              gridHelpers.push({
+                object,
+                visible: object.visible,
+              })
+              object.visible = false
+            }
+          })
+
+          gl.setPixelRatio(1)
+          gl.setSize(EXPORT_CAPTURE_WIDTH, EXPORT_CAPTURE_HEIGHT, false)
+          gl.setClearColor(EXPORT_BACKGROUND_COLOR, 1)
+          camera.aspect = EXPORT_CAPTURE_WIDTH / EXPORT_CAPTURE_HEIGHT
+
+          for (const view of getExportCameraViews(boothSize)) {
+            camera.position.fromArray(view.position)
+            camera.up.fromArray(view.up)
+            camera.lookAt(...view.target)
+            camera.updateProjectionMatrix()
+
+            if (controls?.target) {
+              controls.target.fromArray(view.target)
+              controls.update()
+            }
+
+            invalidate()
+            await waitForAnimationFrame()
+            gl.render(scene, camera)
+
+            captures.push({
+              id: view.id,
+              label: view.label,
+              dataUrl: gl.domElement.toDataURL('image/jpeg', 0.92),
+            })
+          }
+        } finally {
+          camera.position.copy(originalPosition)
+          camera.quaternion.copy(originalQuaternion)
+          camera.up.copy(originalUp)
+          camera.aspect = originalAspect
+          camera.updateProjectionMatrix()
+
+          if (controls?.target && originalTarget) {
+            controls.target.copy(originalTarget)
+            controls.update()
+          }
+
+          gridHelpers.forEach(({ object, visible }) => {
+            object.visible = visible
+          })
+          gl.setPixelRatio(originalPixelRatio)
+          gl.setSize(originalSize.x, originalSize.y, false)
+          gl.setClearColor(originalClearColor, originalClearAlpha)
+          invalidate()
+          await waitForAnimationFrame()
+          gl.render(scene, camera)
+        }
+
+        return captures
+      },
+    }),
+    [boothSize, camera, controls, gl, invalidate, scene],
+  )
+
+  return null
+}
+
 function createFloorTexture(baseTexture, repeatX, repeatY) {
   const nextTexture = baseTexture.clone()
 
@@ -141,7 +275,7 @@ function createFloorTexture(baseTexture, repeatX, repeatY) {
   return nextTexture
 }
 
-function ExhibitFloor({ boothSize, flooring }) {
+function ExhibitFloor({ boothSize, flooring, hideGrid = false }) {
   const floorRef = useRef(null)
   const texture = useTexture(flooring.texturePath)
   const { width, depth, widthFeet, depthFeet } = useMemo(
@@ -228,7 +362,7 @@ function ExhibitFloor({ boothSize, flooring }) {
       >
         <boxGeometry args={[width, FLOOR_THICKNESS, depth]} />
       </mesh>
-      <SceneGrid />
+      {!hideGrid && <SceneGrid />}
     </>
   )
 }
@@ -598,7 +732,7 @@ class ModelErrorBoundary extends Component {
   }
 }
 
-export default function CanvasScene({
+const CanvasScene = forwardRef(function CanvasScene({
   booth,
   flooring,
   graphicUploads,
@@ -606,7 +740,9 @@ export default function CanvasScene({
   selectedAccessoryId,
   onAccessorySelect,
   onSceneDeselect,
-}) {
+  hideSelectionOutline = false,
+  hideGrid = false,
+}, ref) {
   const isMobile = useIsMobileViewport()
   const [boothModelState, setBoothModelState] = useState({
     status: 'loading',
@@ -676,7 +812,7 @@ export default function CanvasScene({
               rotation={accessoryPlacements[accessory.id]?.rotation ?? accessory.rotation}
               graphicTextureUrls={counterGraphicTextureUrls}
               castsShadow
-              isSelected={selectedAccessoryId === accessory.id}
+              isSelected={selectedAccessoryId === accessory.id && !hideSelectionOutline}
               onSelect={() => onAccessorySelect?.(accessory.id)}
               centerPivot
             />
@@ -686,7 +822,7 @@ export default function CanvasScene({
       {(boothModelStatus === 'empty' || boothModelStatus === 'failed') && (
         <FallbackBoothModel booth={booth} />
       )}
-      <ExhibitFloor boothSize={booth.size} flooring={flooring} />
+      <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       <OrbitControls
         makeDefault
         enablePan={false}
@@ -694,9 +830,12 @@ export default function CanvasScene({
         maxDistance={11}
         target={CAMERA_TARGET}
       />
+      <SceneCaptureBridge boothSize={booth.size} captureRef={ref} />
     </Canvas>
   )
-}
+})
+
+export default CanvasScene
 
 useGLTF.preload('/models/booths/bm101.glb')
 useGLTF.preload('/models/accessories/bm-counter.glb')
