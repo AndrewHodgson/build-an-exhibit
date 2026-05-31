@@ -4,23 +4,78 @@ function findCapture(captures, id) {
   return captures.find((capture) => capture.id === id)
 }
 
-function addFittedImage(doc, imageData, x, y, maxWidth, maxHeight, format = 'JPEG') {
-  const imageProperties = doc.getImageProperties(imageData)
-  const ratio = imageProperties.width / imageProperties.height
-  let width = maxWidth
+function fitImageContain(imageWidth, imageHeight, boxX, boxY, boxWidth, boxHeight) {
+  const ratio = imageWidth / imageHeight
+  let width = boxWidth
   let height = width / ratio
 
-  if (height > maxHeight) {
-    height = maxHeight
+  if (height > boxHeight) {
+    height = boxHeight
     width = height * ratio
   }
 
-  const offsetX = x + (maxWidth - width) / 2
-  const offsetY = y + (maxHeight - height) / 2
+  return {
+    x: boxX + (boxWidth - width) / 2,
+    y: boxY + (boxHeight - height) / 2,
+    width,
+    height,
+  }
+}
 
-  doc.addImage(imageData, format, offsetX, offsetY, width, height)
+function getImageDimensions(doc, imageData, dimensions) {
+  if (dimensions?.width && dimensions?.height) {
+    return dimensions
+  }
 
-  return { width, height, x: offsetX, y: offsetY }
+  const imageProperties = doc.getImageProperties(imageData)
+
+  return {
+    width: imageProperties.width,
+    height: imageProperties.height,
+  }
+}
+
+function addFittedImage(
+  doc,
+  imageData,
+  x,
+  y,
+  maxWidth,
+  maxHeight,
+  format = 'JPEG',
+  dimensions,
+  viewName,
+) {
+  const imageDimensions = getImageDimensions(doc, imageData, dimensions)
+  const placement = fitImageContain(
+    imageDimensions.width,
+    imageDimensions.height,
+    x,
+    y,
+    maxWidth,
+    maxHeight,
+  )
+
+  if (import.meta.env.DEV && viewName) {
+    console.info(
+      `PDF export ${viewName}: captured ${imageDimensions.width}x${imageDimensions.height} ` +
+        `(aspect ${Number((imageDimensions.width / imageDimensions.height).toFixed(4))}), ` +
+        `box ${maxWidth}x${maxHeight}, ` +
+        `draw ${Number(placement.width.toFixed(2))}x${Number(placement.height.toFixed(2))} ` +
+        `(aspect ${Number((placement.width / placement.height).toFixed(4))})`,
+    )
+  }
+
+  doc.addImage(
+    imageData,
+    format,
+    placement.x,
+    placement.y,
+    placement.width,
+    placement.height,
+  )
+
+  return placement
 }
 
 function formatGraphicStatus(upload) {
@@ -141,6 +196,10 @@ export async function createBoothSummaryPdf({
       logoMaxWidth,
       logoMaxHeight,
       'PNG',
+      {
+        width: logo.width,
+        height: logo.height,
+      },
     )
   } catch {
     doc.setTextColor(33, 70, 112)
@@ -183,6 +242,12 @@ export async function createBoothSummaryPdf({
       imageBlockY + 14,
       leftColumnWidth - 8,
       imageBlockHeight - 18,
+      'JPEG',
+      {
+        width: perspectiveCapture.width,
+        height: perspectiveCapture.height,
+      },
+      perspectiveCapture.id,
     )
   }
 
@@ -194,6 +259,12 @@ export async function createBoothSummaryPdf({
       imageBlockY + 14,
       rightColumnWidth - 8,
       stackedImageHeight - 18,
+      'JPEG',
+      {
+        width: frontCapture.width,
+        height: frontCapture.height,
+      },
+      frontCapture.id,
     )
   }
 
@@ -205,6 +276,12 @@ export async function createBoothSummaryPdf({
       imageBlockY + stackedImageHeight + gap + 14,
       rightColumnWidth - 8,
       stackedImageHeight - 18,
+      'JPEG',
+      {
+        width: topCapture.width,
+        height: topCapture.height,
+      },
+      topCapture.id,
     )
   }
 

@@ -42,7 +42,9 @@ Graphic recommendations:
 * Counter/controller/outline behavior should be retested when additional accessories are introduced.
 * Continue mobile testing as the right panel, crop modal, and controller become denser.
 * Preserve the current material targeting; do not globally override GLB materials.
-* PDF export includes the SourceOne SVG logo, captures perspective/front/top views at 4:3, uses a white export background, hides grid/selection/controller UI during capture, and uses size-specific camera presets plus contain-style image placement for 10x10 and 10x20 booths.
+* PDF export includes the SourceOne SVG logo, captures perspective/front/top views from the visible WebGL canvas with a white export background, hides grid/selection/controller UI during capture, and uses size-specific camera presets plus explicit-dimension contain-style image placement for 10x10 and 10x20 booths.
+* PDF image squishing/darkness was traced to the export render path rather than PDF placement. Export now avoids both live-canvas resizing and offscreen render-target readback.
+* Mobile portrait PDF exports preserve aspect ratio but may have larger margins because captures now use the visible canvas aspect.
 * PDF export should be retested as model complexity grows.
 * The Vite production build may warn about large chunks as Three.js dependencies grow.
 

@@ -462,7 +462,11 @@ Export behavior:
 * Temporarily hides the Three.js scene grid from captured images.
 * Temporarily moves the existing Three.js camera through preset export views.
 * Temporarily uses a plain white export clear background so the normal CSS gradient is not part of exported images.
-* Temporarily renders captures at `1200 × 900`, a 4:3 aspect ratio, before restoring the live canvas size and pixel ratio.
+* Captures from the visible WebGL canvas so export uses the same renderer color/tone-mapping/output path as normal app rendering.
+* Does not resize or restyle the live R3F canvas during capture.
+* Updates the camera aspect to the actual visible canvas drawing-buffer aspect before rendering each export view.
+* Each captured image stores its actual pixel width/height.
+* PDF image placement uses `fitImageContain()` with the stored capture dimensions instead of stretching images to fixed box dimensions.
 * Hides grid helpers imperatively during capture as a fallback in addition to the React export-mode grid toggle.
 * Restores the user's camera position, camera orientation, camera up vector, OrbitControls target, and normal clear background after capture.
 * Does not change the normal app gradient, grid, camera controls, model placement, or material setup.
@@ -476,9 +480,11 @@ Known export limitations:
 * This is a first working PDF, not a final proposal template.
 * No server storage or email flow exists.
 * No PDF export gating or form workflow exists.
-* Export capture quality currently uses a fixed `1200 × 900` render size.
+* Export capture resolution currently depends on the visible canvas drawing-buffer size and DPR cap.
+* Mobile portrait exports preserve aspect ratio, but the portrait canvas can create larger margins inside the landscape-oriented PDF image boxes. Desktop or tablet-width export gives the best current PDF composition.
 * Optional furniture is not included yet because optional furniture does not exist yet.
 * The logo SVG is converted to a PNG data URL in the browser before insertion into the PDF for compatibility.
+* Prior image squishing/darkness came from the export render path, not PDF placement. The offscreen render target readback could differ from the live renderer color/output path, and earlier live-canvas resizing allowed CSS canvas size, R3F internal size, device pixel ratio, and manual camera aspect to disagree. Export now captures the visible canvas without resizing it and uses explicit-dimension contain-fit PDF placement.
 
 ## Performance Settings
 

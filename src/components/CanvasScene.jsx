@@ -25,7 +25,6 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
-  Vector2,
   Vector3,
 } from 'three'
 import { flooringTexturePreloadPaths } from '../../data/flooring.js'
@@ -42,8 +41,6 @@ const SCENE_GRID_Y = -FLOOR_THICKNESS - 0.006
 const SELECTED_OUTLINE_COLOR = '#f97316'
 const SELECTED_OUTLINE_PADDING = 0.035
 const EXPORT_BACKGROUND_COLOR = '#ffffff'
-const EXPORT_CAPTURE_WIDTH = 1200
-const EXPORT_CAPTURE_HEIGHT = 900
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
@@ -187,10 +184,12 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
         const originalUp = camera.up.clone()
         const originalAspect = camera.aspect
         const originalTarget = controls?.target?.clone()
-        const originalSize = gl.getSize(new Vector2())
-        const originalPixelRatio = gl.getPixelRatio()
         const originalClearColor = gl.getClearColor(new Color()).clone()
         const originalClearAlpha = gl.getClearAlpha()
+        const originalRenderTarget = gl.getRenderTarget()
+        const captureWidth = gl.domElement.width
+        const captureHeight = gl.domElement.height
+        const captureAspect = captureWidth / captureHeight
         const gridHelpers = []
         const captures = []
 
@@ -205,10 +204,10 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
             }
           })
 
-          gl.setPixelRatio(1)
-          gl.setSize(EXPORT_CAPTURE_WIDTH, EXPORT_CAPTURE_HEIGHT, false)
+          gl.setRenderTarget(null)
           gl.setClearColor(EXPORT_BACKGROUND_COLOR, 1)
-          camera.aspect = EXPORT_CAPTURE_WIDTH / EXPORT_CAPTURE_HEIGHT
+          camera.aspect = captureAspect
+          camera.updateProjectionMatrix()
 
           for (const view of getExportCameraViews(boothSize)) {
             camera.position.fromArray(view.position)
@@ -223,13 +222,24 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
 
             invalidate()
             await waitForAnimationFrame()
+            gl.setRenderTarget(null)
+            gl.clear(true, true, true)
             gl.render(scene, camera)
 
             captures.push({
               id: view.id,
               label: view.label,
+              width: gl.domElement.width,
+              height: gl.domElement.height,
               dataUrl: gl.domElement.toDataURL('image/jpeg', 0.92),
             })
+
+            if (import.meta.env.DEV) {
+              console.info(
+                `PDF capture ${view.id}: live canvas ${gl.domElement.width}x${gl.domElement.height}, ` +
+                  `camera aspect ${Number(camera.aspect.toFixed(4))}`,
+              )
+            }
           }
         } finally {
           camera.position.copy(originalPosition)
@@ -246,8 +256,7 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
           gridHelpers.forEach(({ object, visible }) => {
             object.visible = visible
           })
-          gl.setPixelRatio(originalPixelRatio)
-          gl.setSize(originalSize.x, originalSize.y, false)
+          gl.setRenderTarget(originalRenderTarget)
           gl.setClearColor(originalClearColor, originalClearAlpha)
           invalidate()
           await waitForAnimationFrame()
