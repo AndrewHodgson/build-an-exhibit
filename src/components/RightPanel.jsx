@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import {
+  premiumFlooringOptions,
+  standardFlooringOptions,
+} from '../../data/flooring.js'
 
 function Section({ title, defaultOpen = false, children }) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
@@ -51,12 +55,8 @@ function LayoutCards({ booths, selectedBooth, onBoothChange }) {
           className={`layout-card ${selectedBooth.id === booth.id ? 'is-selected' : ''}`}
           onClick={() => onBoothChange(booth.id)}
         >
-          <span
-            className="layout-thumb"
-            style={{ '--preview-accent': booth.preview?.accent }}
-            aria-hidden="true"
-          >
-            <span className={`preview-wall preview-${booth.preview?.walls}`} />
+          <span className="layout-thumb" aria-hidden="true">
+            <img src={booth.thumbnailPath} alt="" />
           </span>
           <span className="layout-copy">
             <span className="layout-code">{booth.code}</span>
@@ -76,14 +76,115 @@ function PlaceholderButton({ children }) {
   )
 }
 
+function PanelSubsection({ title, children }) {
+  return (
+    <div className="panel-subsection">
+      <h2>{title}</h2>
+      {children}
+    </div>
+  )
+}
+
+function TextureSwatches({ label, value, options, onChange, showLabel = true }) {
+  return (
+    <div className="texture-swatch-group">
+      {showLabel && <p className="texture-swatch-label">{label}</p>}
+      <div className="texture-swatch-grid">
+        {options.map((option) => {
+          const isSelected = value === option.id
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              title={option.label}
+              aria-label={`${label}: ${option.label}`}
+              className={`texture-swatch ${isSelected ? 'is-selected' : ''}`}
+              style={{ backgroundImage: `url(${option.texturePath})` }}
+              onClick={() => onChange(option.id)}
+            />
+          )
+        })}
+      </div>
+      <p className="texture-swatch-current">
+        {options.find((option) => option.id === value)?.label}
+      </p>
+    </div>
+  )
+}
+
+function GraphicUploadZone({
+  zone,
+  upload,
+  error,
+  onGraphicFileChange,
+  onGraphicClear,
+}) {
+  const inputId = `graphic-upload-${zone.id}`
+
+  return (
+    <div className="graphic-upload-zone">
+      <div className="graphic-upload-heading">
+        <h2>{zone.label}</h2>
+        <p>
+          Recommended: {zone.recommendedWidth} x {zone.recommendedHeight} px
+        </p>
+        <p>JPG only, max 2MB</p>
+      </div>
+
+      <input
+        id={inputId}
+        className="visually-hidden"
+        type="file"
+        accept=".jpg,.jpeg,image/jpeg"
+        onChange={(event) => {
+          onGraphicFileChange(zone.id, event.target.files?.[0])
+          event.target.value = ''
+        }}
+      />
+      <label className="upload-button" htmlFor={inputId}>
+        Upload JPG
+      </label>
+
+      {upload ? (
+        <div className="graphic-upload-status">
+          <p>{upload.fileName}</p>
+          <p>
+            {upload.wasCropped ? 'Cropped preview' : 'Uploaded preview'} ·{' '}
+            {upload.width} x {upload.height}px
+          </p>
+          {upload.warning && <p className="graphic-warning">{upload.warning}</p>}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => onGraphicClear(zone.id)}
+          >
+            Clear graphic
+          </button>
+        </div>
+      ) : (
+        <p className="graphic-upload-empty">No graphic uploaded.</p>
+      )}
+
+      {error && <p className="graphic-error">{error}</p>}
+    </div>
+  )
+}
+
 export default function RightPanel({
   boothSizes,
   booths,
   selectedSize,
   selectedBooth,
+  selectedFlooringId,
+  graphicZones,
+  graphicUploads,
+  graphicErrors,
   onSizeChange,
   onBoothChange,
-  onOpenWelcome,
+  onFlooringChange,
+  onGraphicFileChange,
+  onGraphicClear,
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
 
@@ -139,9 +240,28 @@ export default function RightPanel({
               selectedBooth={selectedBooth}
               onBoothChange={onBoothChange}
             />
-            <button type="button" className="text-button" onClick={onOpenWelcome}>
-              Restart selection flow
-            </button>
+          </Section>
+
+          <Section title="Carpet & Flooring">
+            <PanelSubsection title="Standard Carpet">
+              <TextureSwatches
+                label="Standard Carpet"
+                value={selectedFlooringId}
+                options={standardFlooringOptions}
+                showLabel={false}
+                onChange={onFlooringChange}
+              />
+            </PanelSubsection>
+
+            <PanelSubsection title="Premium Carpet & Flooring">
+              <TextureSwatches
+                label="Premium Carpet & Flooring"
+                value={selectedFlooringId}
+                options={premiumFlooringOptions}
+                showLabel={false}
+                onChange={onFlooringChange}
+              />
+            </PanelSubsection>
           </Section>
 
           <Section title="Booth Details" defaultOpen>
@@ -158,23 +278,34 @@ export default function RightPanel({
                 <dt>Type</dt>
                 <dd>{selectedBooth.type}</dd>
               </div>
-              <div>
-                <dt>Template</dt>
-                <dd>
-                  {selectedBooth.recommendedTemplateWidth} x{' '}
-                  {selectedBooth.recommendedTemplateHeight}px
-                </dd>
-              </div>
             </dl>
             <p className="panel-note">{selectedBooth.description}</p>
+            <div className="included-block">
+              <p className="field-label">Included with this booth</p>
+              <ul className="included-list">
+                <li>BeMatrix wall structure</li>
+                {selectedBooth.includedAccessories?.map((accessory) => (
+                  <li key={accessory.id}>{accessory.name}</li>
+                ))}
+              </ul>
+            </div>
           </Section>
 
-          <Section title="Graphics">
+          <Section title="Graphics" defaultOpen>
             <p className="panel-note">
-              JPG graphic preview upload and downloadable UV/template files will live here.
+              Upload JPG previews for the booth graphics. Images are used only in this
+              browser preview and are not stored.
             </p>
-            <PlaceholderButton>Upload graphic preview</PlaceholderButton>
-            <PlaceholderButton>Download template</PlaceholderButton>
+            {graphicZones.map((zone) => (
+              <GraphicUploadZone
+                key={zone.id}
+                zone={zone}
+                upload={graphicUploads[zone.id]}
+                error={graphicErrors[zone.id]}
+                onGraphicFileChange={onGraphicFileChange}
+                onGraphicClear={onGraphicClear}
+              />
+            ))}
           </Section>
 
           <Section title="Furniture">

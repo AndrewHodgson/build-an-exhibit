@@ -3,123 +3,71 @@ export const boothSizes = [
     value: '10x10',
     label: '10 x 10',
     description: 'Compact BeMatrix rental exhibit options for single-booth footprints.',
+    featuredImagePath: '/thumbnails/booths/10x10/BM10x10_Featured.jpg',
   },
   {
     value: '10x20',
     label: '10 x 20',
     description: 'Linear BeMatrix rental exhibit options for expanded inline presence.',
+    featuredImagePath: '/thumbnails/booths/10x20/BM10x20_Featured.jpg',
   },
 ]
 
+const BM101_MODEL_PATH = '/models/booths/bm101.glb'
+const INCLUDED_COUNTER = {
+  id: 'included-bm-counter',
+  name: 'Reception counter',
+  type: 'included-accessory',
+  modelPath: '/models/accessories/bm-counter.glb',
+  position: [0.9, 0, 0.72],
+  rotation: [0, 0, 0],
+}
+
+const PREVIEW_ACCENTS = ['#2f6f73', '#5f6470', '#214670', '#7a5c33', '#4f5f80']
+const PREVIEW_WALLS = [
+  'left-return',
+  'header',
+  'backwall',
+  'split-backwall',
+  'wide-header',
+]
+
+function createBooth({ codeNumber, size }) {
+  const code = `BM${codeNumber}`
+  const sizeFolder = size === '10x20' ? '10x20' : '10x10'
+  const recommendedTemplateWidth = size === '10x20' ? 10200 : 5400
+  const previewIndex = codeNumber % PREVIEW_ACCENTS.length
+
+  return {
+    id: code.toLowerCase(),
+    name: `BeMatrix Rental Exhibit ${codeNumber}`,
+    code,
+    size,
+    type: 'BeMatrix rental exhibit',
+    description:
+      size === '10x20'
+        ? 'A 10x20 BeMatrix rental exhibit package with a branded backwall and included reception counter.'
+        : 'A 10x10 BeMatrix rental exhibit package with a branded backwall and included reception counter.',
+    modelPath: BM101_MODEL_PATH,
+    thumbnailPath: `/thumbnails/booths/${sizeFolder}/${code}-View-1_Thumbnail.jpg`,
+    templatePath: `/templates/${code.toLowerCase()}-graphic-template.pdf`,
+    recommendedTemplateWidth,
+    recommendedTemplateHeight: 2400,
+    includedAccessories: [INCLUDED_COUNTER],
+    preview: {
+      walls: PREVIEW_WALLS[previewIndex],
+      accent: PREVIEW_ACCENTS[previewIndex],
+    },
+  }
+}
+
 export const booths = [
-  {
-    id: 'bm100',
-    name: 'BeMatrix Rental Exhibit 100',
-    code: 'BM100',
-    size: '10x10',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A clean 10x10 inline exhibit starter layout with a branded backwall and open floor.',
-    modelPath: '/models/bm100.glb',
-    thumbnailPath: '/images/exhibits/bm100.jpg',
-    templatePath: '/templates/bm100-graphic-template.pdf',
-    recommendedTemplateWidth: 4800,
-    recommendedTemplateHeight: 2400,
-    preview: {
-      walls: 'backwall',
-      accent: '#214670',
-    },
-  },
-  {
-    id: 'bm101',
-    name: 'BeMatrix Rental Exhibit 101',
-    code: 'BM101',
-    size: '10x10',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A 10x10 exhibit with a partial return wall for a more dimensional product story.',
-    modelPath: '/models/bm101.glb',
-    thumbnailPath: '/images/exhibits/bm101.jpg',
-    templatePath: '/templates/bm101-graphic-template.pdf',
-    recommendedTemplateWidth: 5400,
-    recommendedTemplateHeight: 2400,
-    preview: {
-      walls: 'left-return',
-      accent: '#2f6f73',
-    },
-  },
-  {
-    id: 'bm102',
-    name: 'BeMatrix Rental Exhibit 102',
-    code: 'BM102',
-    size: '10x10',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A 10x10 rental exhibit concept with a simple header and reception counter zone.',
-    modelPath: '/models/bm102.glb',
-    thumbnailPath: '/images/exhibits/bm102.jpg',
-    templatePath: '/templates/bm102-graphic-template.pdf',
-    recommendedTemplateWidth: 4800,
-    recommendedTemplateHeight: 2700,
-    preview: {
-      walls: 'header',
-      accent: '#5f6470',
-    },
-  },
-  {
-    id: 'bm200',
-    name: 'BeMatrix Rental Exhibit 200',
-    code: 'BM200',
-    size: '10x20',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A 10x20 inline exhibit with a wide continuous graphic wall and open demo space.',
-    modelPath: '/models/bm200.glb',
-    thumbnailPath: '/images/exhibits/bm200.jpg',
-    templatePath: '/templates/bm200-graphic-template.pdf',
-    recommendedTemplateWidth: 9600,
-    recommendedTemplateHeight: 2400,
-    preview: {
-      walls: 'wide-backwall',
-      accent: '#214670',
-    },
-  },
-  {
-    id: 'bm201',
-    name: 'BeMatrix Rental Exhibit 201',
-    code: 'BM201',
-    size: '10x20',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A 10x20 rental exhibit with split feature walls and a central presentation area.',
-    modelPath: '/models/bm201.glb',
-    thumbnailPath: '/images/exhibits/bm201.jpg',
-    templatePath: '/templates/bm201-graphic-template.pdf',
-    recommendedTemplateWidth: 10200,
-    recommendedTemplateHeight: 2400,
-    preview: {
-      walls: 'split-backwall',
-      accent: '#2f6f73',
-    },
-  },
-  {
-    id: 'bm202',
-    name: 'BeMatrix Rental Exhibit 202',
-    code: 'BM202',
-    size: '10x20',
-    type: 'BeMatrix rental exhibit',
-    description:
-      'A 10x20 exhibit starter layout with a header element and balanced accessory zones.',
-    modelPath: '/models/bm202.glb',
-    thumbnailPath: '/images/exhibits/bm202.jpg',
-    templatePath: '/templates/bm202-graphic-template.pdf',
-    recommendedTemplateWidth: 9600,
-    recommendedTemplateHeight: 2700,
-    preview: {
-      walls: 'wide-header',
-      accent: '#5f6470',
-    },
-  },
+  ...Array.from({ length: 10 }, (_, index) =>
+    createBooth({ codeNumber: 101 + index, size: '10x10' }),
+  ),
+  ...Array.from({ length: 10 }, (_, index) =>
+    createBooth({ codeNumber: 201 + index, size: '10x20' }),
+  ),
 ]
 
 export function getBoothsBySize(size) {

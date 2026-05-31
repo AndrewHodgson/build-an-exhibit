@@ -58,10 +58,9 @@ export default function WelcomeModal({
                 onClick={() => chooseSize(size.value)}
               >
                 <span className="choice-preview footprint-preview">
-                  <span className={`footprint-shape footprint-${size.value}`} />
+                  <img src={size.featuredImagePath} alt="" />
                 </span>
-                <span className="choice-title">{size.label}</span>
-                <span className="choice-description">{size.description}</span>
+                <span className="choice-title">{size.label} Rental Exhibits</span>
               </button>
             ))}
           </div>
@@ -69,7 +68,7 @@ export default function WelcomeModal({
 
         {step === 2 && (
           <>
-            <div className="choice-grid">
+            <div className="choice-grid booth-choice-grid">
               {availableBooths.map((booth) => {
                 const isSelected = selectedBoothId === booth.id
 
@@ -80,15 +79,10 @@ export default function WelcomeModal({
                     className={`choice-card ${isSelected ? 'is-selected' : ''}`}
                     onClick={() => chooseBooth(booth.id)}
                   >
-                    <span
-                      className="choice-preview booth-preview"
-                      style={{ '--preview-accent': booth.preview?.accent }}
-                    >
-                      <span className={`preview-wall preview-${booth.preview?.walls}`} />
+                    <span className="choice-preview booth-preview">
+                      <img src={booth.thumbnailPath} alt="" />
                     </span>
-                    <span className="choice-kicker">{booth.code}</span>
                     <span className="choice-title">{booth.name}</span>
-                    <span className="choice-description">{booth.description}</span>
                   </button>
                 )
               })}
