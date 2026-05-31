@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { getBoothsBySize } from '../../data/booths.js'
+import SourceOneLogo from './SourceOneLogo.jsx'
 
 export default function WelcomeModal({
   boothSizes,
@@ -34,8 +35,7 @@ export default function WelcomeModal({
         aria-labelledby="welcome-title"
       >
         <div className="modal-brand">
-          <span className="brand-mark">S1</span>
-          <span>SourceOne Events</span>
+          <SourceOneLogo />
         </div>
 
         <div className="modal-heading">

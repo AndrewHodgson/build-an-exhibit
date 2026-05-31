@@ -3,17 +3,17 @@ import {
   premiumFlooringOptions,
   standardFlooringOptions,
 } from '../../data/flooring.js'
+import SourceOneLogo from './SourceOneLogo.jsx'
 
-function Section({ title, defaultOpen = false, children }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
-
+function Section({ id, title, openSectionId, onOpen, children }) {
+  const isOpen = openSectionId === id
   return (
     <section className="panel-section">
       <button
         type="button"
         className="section-toggle"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => onOpen(id)}
       >
         <span>{title}</span>
         <span aria-hidden="true">{isOpen ? '-' : '+'}</span>
@@ -127,7 +127,7 @@ function GraphicUploadZone({
       <div className="graphic-upload-heading">
         <h2>{zone.label}</h2>
         <p>
-          Recommended: {zone.recommendedWidth} x {zone.recommendedHeight} px
+          Recommended: {zone.recommendedWidth} × {zone.recommendedHeight} px
         </p>
         <p>JPG only, max 2MB</p>
       </div>
@@ -187,14 +187,19 @@ export default function RightPanel({
   onGraphicClear,
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
+  const [openSectionId, setOpenSectionId] = useState('booth-selection')
+  const toggleSection = (sectionId) => {
+    setOpenSectionId((currentSectionId) =>
+      currentSectionId === sectionId ? null : sectionId,
+    )
+  }
 
   return (
     <>
       {!isMobileDrawerOpen && (
         <div className="mobile-topbar">
           <div className="mobile-brand">
-            <span className="brand-mark">S1</span>
-            <span>Build an Exhibit</span>
+            <SourceOneLogo className="mobile-logo" />
           </div>
           <button
             type="button"
@@ -209,8 +214,7 @@ export default function RightPanel({
       <aside className={`right-panel ${isMobileDrawerOpen ? 'is-open' : ''}`}>
         <div className="panel-header">
           <div className="panel-brand">
-            <span className="brand-mark">S1</span>
-            <span>SourceOne Events</span>
+            <SourceOneLogo />
           </div>
           <button
             type="button"
@@ -228,7 +232,12 @@ export default function RightPanel({
         </div>
 
         <div className="panel-sections">
-          <Section title="Booth Selection" defaultOpen>
+          <Section
+            id="booth-selection"
+            title="Booth Selection"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <SegmentedControl
               label="Booth size"
               value={selectedSize}
@@ -242,29 +251,12 @@ export default function RightPanel({
             />
           </Section>
 
-          <Section title="Carpet & Flooring">
-            <PanelSubsection title="Standard Carpet">
-              <TextureSwatches
-                label="Standard Carpet"
-                value={selectedFlooringId}
-                options={standardFlooringOptions}
-                showLabel={false}
-                onChange={onFlooringChange}
-              />
-            </PanelSubsection>
-
-            <PanelSubsection title="Premium Carpet & Flooring">
-              <TextureSwatches
-                label="Premium Carpet & Flooring"
-                value={selectedFlooringId}
-                options={premiumFlooringOptions}
-                showLabel={false}
-                onChange={onFlooringChange}
-              />
-            </PanelSubsection>
-          </Section>
-
-          <Section title="Booth Details" defaultOpen>
+          <Section
+            id="booth-details"
+            title="Booth Details"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <dl className="details-list">
               <div>
                 <dt>Code</dt>
@@ -291,7 +283,12 @@ export default function RightPanel({
             </div>
           </Section>
 
-          <Section title="Graphics" defaultOpen>
+          <Section
+            id="graphics"
+            title="Graphics"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <p className="panel-note">
               Upload JPG previews for the booth graphics. Images are used only in this
               browser preview and are not stored.
@@ -308,21 +305,63 @@ export default function RightPanel({
             ))}
           </Section>
 
-          <Section title="Furniture">
+          <Section
+            id="furniture"
+            title="Furniture"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <p className="panel-note">
               Furniture placement, rotation, and delete controls will be added in a later phase.
             </p>
             <PlaceholderButton>Add furniture</PlaceholderButton>
           </Section>
 
-          <Section title="Export">
+          <Section
+            id="carpet-flooring"
+            title="Carpet & Flooring"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
+            <PanelSubsection title="Standard Carpet">
+              <TextureSwatches
+                label="Standard Carpet"
+                value={selectedFlooringId}
+                options={standardFlooringOptions}
+                showLabel={false}
+                onChange={onFlooringChange}
+              />
+            </PanelSubsection>
+
+            <PanelSubsection title="Premium Carpet & Flooring">
+              <TextureSwatches
+                label="Premium Carpet & Flooring"
+                value={selectedFlooringId}
+                options={premiumFlooringOptions}
+                showLabel={false}
+                onChange={onFlooringChange}
+              />
+            </PanelSubsection>
+          </Section>
+
+          <Section
+            id="export"
+            title="Export"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <p className="panel-note">
               A clean JPG preview export will be wired up after the scene and models are final.
             </p>
             <PlaceholderButton>Export JPG preview</PlaceholderButton>
           </Section>
 
-          <Section title="Contact SourceOne">
+          <Section
+            id="contact-sourceone"
+            title="Contact SourceOne"
+            openSectionId={openSectionId}
+            onOpen={toggleSection}
+          >
             <p className="panel-note">
               Follow-up request submission will be connected after the MVP configurator flow is
               defined.

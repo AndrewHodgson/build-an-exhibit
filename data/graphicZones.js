@@ -13,8 +13,8 @@ export const graphicZones = [
     id: 'counter',
     label: 'Counter Graphic',
     materialName: 'MAT_graphic_counter',
-    recommendedWidth: 2000,
-    recommendedHeight: 2000,
+    recommendedWidth: 1000,
+    recommendedHeight: 1000,
     maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
   },
 ]

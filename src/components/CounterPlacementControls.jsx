@@ -1,43 +1,69 @@
-export default function CounterPlacementControls({
-  accessoryName,
-  onMove,
-  onRotate,
-  onReset,
-}) {
+function ControllerButton({ className, label, onClick }) {
   return (
-    <div className="counter-controls" aria-label={`${accessoryName} placement controls`}>
-      <div className="counter-controls-header">
-        <p>Counter Placement</p>
-        <span>{accessoryName}</span>
-      </div>
+    <button
+      type="button"
+      className={`controller-hit ${className}`}
+      aria-label={label}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick()
+      }}
+    />
+  )
+}
 
-      <div className="counter-move-grid" aria-label="Move counter">
-        <button type="button" onClick={() => onMove('forward')}>
-          Forward
-        </button>
-        <button type="button" onClick={() => onMove('left')}>
-          Left
-        </button>
-        <button type="button" onClick={() => onMove('right')}>
-          Right
-        </button>
-        <button type="button" onClick={() => onMove('back')}>
-          Back
-        </button>
-      </div>
+export default function CounterPlacementControls({ accessoryName, onMove, onRotate, onReset }) {
+  return (
+    <div
+      className="counter-controller"
+      role="group"
+      aria-label={`${accessoryName} placement`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <img
+        src="/controller.svg"
+        alt=""
+        className="counter-controller-art"
+        draggable="false"
+      />
 
-      <div className="counter-rotate-row" aria-label="Rotate counter">
-        <button type="button" onClick={() => onRotate('counterclockwise')}>
-          Rotate Left
-        </button>
-        <button type="button" onClick={() => onRotate('clockwise')}>
-          Rotate Right
-        </button>
-      </div>
-
-      <button type="button" className="counter-reset-button" onClick={onReset}>
-        Reset
-      </button>
+      <ControllerButton
+        className="controller-hit-rotate-left"
+        label="Rotate counter counterclockwise"
+        onClick={() => onRotate('counterclockwise')}
+      />
+      <ControllerButton
+        className="controller-hit-rotate-right"
+        label="Rotate counter clockwise"
+        onClick={() => onRotate('clockwise')}
+      />
+      <ControllerButton
+        className="controller-hit-up"
+        label="Move counter forward"
+        onClick={() => onMove('back')}
+      />
+      <ControllerButton
+        className="controller-hit-left"
+        label="Move counter left"
+        onClick={() => onMove('left')}
+      />
+      <ControllerButton
+        className="controller-hit-right"
+        label="Move counter right"
+        onClick={() => onMove('right')}
+      />
+      <ControllerButton
+        className="controller-hit-down"
+        label="Move counter back"
+        onClick={() => onMove('forward')}
+      />
+      <ControllerButton
+        className="controller-hit-reset"
+        label="Reset counter placement"
+        onClick={onReset}
+      />
     </div>
   )
 }

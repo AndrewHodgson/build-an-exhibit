@@ -89,6 +89,7 @@ export default function App() {
   const [accessoryPlacements, setAccessoryPlacements] = useState(() =>
     createDefaultAccessoryPlacements(defaultBooth),
   )
+  const [selectedAccessoryId, setSelectedAccessoryId] = useState(null)
   const [graphicUploads, setGraphicUploads] = useState(emptyGraphicUploads)
   const [graphicErrors, setGraphicErrors] = useState(emptyGraphicUploads)
   const [cropRequest, setCropRequest] = useState(null)
@@ -137,6 +138,7 @@ export default function App() {
     }
 
     resetAccessoryPlacements(nextBooth)
+    setSelectedAccessoryId(null)
     setSelectedSize(size)
     setSelectedBoothId(nextBooth.id)
   }
@@ -145,6 +147,7 @@ export default function App() {
     if (boothId !== selectedBoothId) {
       clearGraphicUploads()
       resetAccessoryPlacements(availableBooths.find((booth) => booth.id === boothId))
+      setSelectedAccessoryId(null)
     }
 
     setSelectedBoothId(boothId)
@@ -157,6 +160,7 @@ export default function App() {
     if (size !== selectedSize || boothId !== selectedBoothId) {
       clearGraphicUploads()
       resetAccessoryPlacements(nextBooth)
+      setSelectedAccessoryId(null)
     }
 
     setSelectedSize(size)
@@ -366,6 +370,9 @@ export default function App() {
           flooring={selectedFlooring}
           graphicUploads={graphicUploads}
           accessoryPlacements={accessoryPlacements}
+          selectedAccessoryId={selectedAccessoryId}
+          onAccessorySelect={setSelectedAccessoryId}
+          onSceneDeselect={() => setSelectedAccessoryId(null)}
         />
       </section>
 
@@ -374,7 +381,7 @@ export default function App() {
         <p>Scroll wheel: zoom in / out</p>
       </div>
 
-      {activeCounter && !isWelcomeOpen && (
+      {activeCounter && selectedAccessoryId === activeCounter.id && !isWelcomeOpen && (
         <CounterPlacementControls
           accessoryName={activeCounter.name}
           onMove={moveCounter}

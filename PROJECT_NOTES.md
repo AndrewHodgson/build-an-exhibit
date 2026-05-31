@@ -6,13 +6,13 @@ Build an Exhibit is a SourceOne Events web app for configuring standard rental e
 
 The app is similar in visual style and structure to the existing Build-a-Booth pipe-and-drape configurator, but this app is focused on BeMatrix rental exhibits.
 
-This is a public-facing visual sales tool, not a full booth builder, not a quoting engine, and not a production artwork or preflight tool.
+This is a public-facing visual sales tool. It is not a full booth builder, not a quoting engine, and not a production artwork or preflight tool.
 
-The main purpose is to let exhibitors and internal SourceOne team members preview standard rental exhibit options, apply sample branded graphics, add simple furniture/accessories, export a preview image, and optionally submit a follow-up request to SourceOne Exhibitor Services.
+The intended purpose is to let exhibitors and SourceOne team members preview standard rental exhibit options, apply sample branded graphics, choose flooring, adjust included accessories, and eventually export a preview image or submit a follow-up request.
 
 ## Project Paths
 
-Existing reference app:
+Reference app:
 
 `/Users/andrewhodgson/Documents/build-a-booth`
 
@@ -20,50 +20,71 @@ Current working app:
 
 `/Users/andrewhodgson/Documents/Build an Exhibit`
 
-The Build-a-Booth app should be used only as a visual/layout/code reference unless specifically instructed otherwise.
+Use Build-a-Booth only as a visual/layout/code reference unless the user explicitly asks otherwise. Do not modify the Build-a-Booth project from this workspace.
 
-Do not modify the Build-a-Booth app unless the user explicitly asks for that.
+## Current Stack
 
-## Relationship To Build-a-Booth
+* Vite
+* React
+* React Three Fiber
+* Drei
+* Three.js
+* react-easy-crop
 
-* Build a Booth = pipe-and-drape booth configurator
-* Build an Exhibit = rental exhibit configurator
+Key files:
 
-Build an Exhibit should preserve the broad Build-a-Booth feel:
+* `src/App.jsx` - main app state and shell
+* `src/components/CanvasScene.jsx` - Three.js scene, GLB loading, floor/grid/camera/orbit, material texture swapping
+* `src/components/RightPanel.jsx` - right-side panel and mobile drawer
+* `src/components/WelcomeModal.jsx` - two-step start flow
+* `src/components/CounterPlacementControls.jsx` - custom SVG counter controller overlay
+* `src/components/CropModal.jsx` - fixed-aspect image crop workflow
+* `src/components/SourceOneLogo.jsx` - reusable SourceOne SVG logo component
+* `src/utils/cropImage.js` - browser crop output helper
+* `data/booths.js` - central booth/accessory config
+* `data/flooring.js` - central carpet/flooring config
+* `data/graphicZones.js` - central graphic upload zone config
+* `src/index.css` - app styling, layout, responsive behavior, gradient background
 
-* full-screen 3D canvas
-* subtle gradient background
-* floor grid
-* right-side control panel
-* mobile-friendly panel behavior
-* button/card styling
-* camera/orbit feel
+## Current Asset Structure
 
-## Intended Users
+Current real test GLBs:
 
-Primary users:
+* `public/models/booths/bm101.glb`
+* `public/models/accessories/bm-counter.glb`
 
-* Exhibitors
-* Internal exhibitor services reps
-* Internal account managers
-* Internal sales reps
+Current graphic/default texture assets:
 
-The app can also be open to people who are not currently part of a SourceOne-managed show.
+* `public/textures/10x10_booths/bm101-texture.jpg`
+* `public/textures/accessories/bm-counter-texture.jpg`
+* `public/textures/carpet/*`
+
+Current thumbnails and featured images:
+
+* `public/thumbnails/booths/10x10/BM10x10_Featured.jpg`
+* `public/thumbnails/booths/10x20/BM10x20_Featured.jpg`
+* `public/thumbnails/booths/10x10/BM101-View-1_Thumbnail.jpg` through `BM110-View-1_Thumbnail.jpg`
+* `public/thumbnails/booths/10x20/BM201-View-1_Thumbnail.jpg` through `BM210-View-1_Thumbnail.jpg`
+
+Current UI assets:
+
+* `public/images/SourceOne-Logo-RGB.svg`
+* `public/controller.svg`
 
 ## MVP Scope
 
-The MVP should eventually allow a user to:
+Current and near-term MVP scope:
 
 1. Choose a 10x10 or 10x20 rental exhibit.
-2. Choose a fixed booth layout.
+2. Choose a fixed BeMatrix rental exhibit layout.
 3. View the booth in a polished 3D scene.
-4. Select flooring/carpet options.
+4. Select flooring/carpet.
 5. Upload and crop a backwall graphic preview.
 6. Upload and crop a counter graphic preview.
-7. Add simple furniture/accessories.
-8. Move, rotate, and delete added furniture/accessories.
-9. Export a clean JPG preview.
-10. Optionally submit a follow-up request to SourceOne Exhibitor Services.
+7. Select and adjust the included counter.
+8. Eventually add optional furniture/accessories.
+9. Eventually export a clean JPG preview.
+10. Eventually submit a follow-up request to SourceOne Exhibitor Services.
 
 ## Out Of Scope Until Requested
 
@@ -76,184 +97,159 @@ Do not add these unless specifically requested:
 * database/storage
 * WordPress deployment
 * all 20 real booth models
-* full image upload workflow
+* optional furniture system
 * collision detection
+* out-of-bounds movement limits
 * physics
 * pricing
 * user accounts
 * production artwork validation
 * PDF export
 
-## Booth Sizes
-
-MVP includes:
-
-* 10x10 inline booths
-* 10x20 inline booths
-
-Future possibility:
-
-* 20x20 booths
-
-Do not build 20x20 support yet.
-
-## Booth Layouts
-
-The booth structure is fixed. Users should not be able to build or edit the BeMatrix structure piece by piece.
-
-MVP will eventually include:
-
-* 10 fixed 10x10 booth layouts
-* 10 fixed 10x20 booth layouts
-
-Temporary booth options may point to the same BM101 model until final booth models are prepared.
-
-Current booth config includes all 20 MVP booth records:
-
-* BM101-BM110 for 10x10
-* BM201-BM210 for 10x20
-
-All current booth records temporarily use `/models/booths/bm101.glb` until final layout-specific models are prepared.
-
-## Booth Naming System
+## Booth Naming And Config
 
 There is no BM100 or BM200.
 
-10x10 booths start at:
+10x10 booths:
 
-* BeMatrix Rental Exhibit 101
-* code: BM101
+* BeMatrix Rental Exhibit 101 through BeMatrix Rental Exhibit 110
+* codes BM101 through BM110
 
-10x20 booths start at:
+10x20 booths:
 
-* BeMatrix Rental Exhibit 201
-* code: BM201
+* BeMatrix Rental Exhibit 201 through BeMatrix Rental Exhibit 210
+* codes BM201 through BM210
 
-Future booth naming should continue from those series:
+Current config:
 
-* 10x10: BM101, BM102, BM103, etc.
-* 10x20: BM201, BM202, BM203, etc.
+* `data/booths.js` creates all 20 MVP booth records.
+* All booth records temporarily point to `/models/booths/bm101.glb`.
+* All booth records currently include the same included counter accessory.
+* All booth records currently use real thumbnail paths.
+* Template paths still exist in config as placeholders, but the current UI uses upload/crop rather than template downloads.
 
-## Current Data Architecture
+Important temporary assumption:
 
-Booth data currently lives in:
-
-`data/booths.js`
-
-Future cleanup may move app data under `src/data/`, but do not move files solely for neatness unless requested.
-
-Each booth object should include fields like:
-
-* id
-* name
-* code
-* size
-* type
-* description
-* modelPath
-* thumbnailPath
-* templatePath
-* recommendedTemplateWidth
-* recommendedTemplateHeight
-* includedAccessories
-* preview
+* BM101 is the only real booth wall GLB currently integrated.
+* BM101 is used as the temporary model for BM102-BM110 and BM201-BM210 until final layout-specific GLBs are prepared.
 
 ## Welcome Flow
 
-The app uses a two-step welcome/start modal.
+The app uses a two-step welcome modal.
 
 Step 1:
 
-* Ask the user whether they are looking for a 10x10 or 10x20 booth.
+* Choose 10 x 10 Rental Exhibits or 10 x 20 Rental Exhibits.
+* Size cards use featured images from `public/thumbnails/booths`.
+* Featured images are shown uncropped with `object-fit: contain`.
 
 Step 2:
 
-* Show booth layout options for the selected size.
-* Include a Back button to return to the size selection step.
+* Choose a specific booth layout for the selected size.
+* Desktop booth grid is 5 columns.
+* Mobile booth grid is 2 columns.
+* Booth cards show thumbnail plus booth name.
+* A Back button returns to size selection.
 
-After selecting a booth:
+After a booth is selected:
 
-* Close the welcome modal.
-* Load the main configurator.
+* The modal closes.
+* The main configurator remains available.
+* Changing booth size/layout later is done from the right panel.
 
-Once inside the main configurator:
+## Right Panel
 
-* The user should still be able to switch between 10x10 and 10x20.
-* The right-side panel should update booth thumbnails/layouts based on selected size.
+Header branding uses:
 
-## Right Panel Sections
+`public/images/SourceOne-Logo-RGB.svg`
 
-The right-side panel should include these major sections:
+Current section order:
 
-* Booth Selection
-* Carpet & Flooring
-* Booth Details
-* Graphics
-* Furniture
-* Export
-* Contact SourceOne
+1. Booth Selection
+2. Booth Details
+3. Graphics
+4. Furniture
+5. Carpet & Flooring
+6. Export
+7. Contact SourceOne
 
-The panel should follow the Build-a-Booth visual style and remain mobile-friendly.
+Accordion behavior:
 
-## Contact / Follow-Up Direction
+* `Booth Selection` is open by default.
+* At most one section can be open at a time.
+* Opening a closed section closes the previously open section.
+* Clicking the currently open section collapses it.
+* Zero open sections is allowed.
 
-There should be a visible contact/follow-up button available at all times.
+Current section status:
 
-Preferred label for now:
+* Booth Selection is wired to size/layout state.
+* Booth Details shows code, size, type, description, and included items.
+* Graphics is wired to backwall/counter JPG upload and crop behavior.
+* Furniture is placeholder-only.
+* Carpet & Flooring is wired to flooring swatches.
+* Export is placeholder-only.
+* Contact SourceOne is placeholder-only.
 
-**Request Follow-Up**
+Mobile behavior:
 
-This should eventually open a modal form similar to the welcome modal.
+* Mobile uses a top bar with the SourceOne SVG logo and Configure button.
+* The right panel becomes a full-screen drawer.
+* The drawer has a Close button.
 
-Avoid finalizing "Request Quote" language until the form/submission workflow is more defined.
+## Graphic Upload And Crop
 
-## Current 3D Asset Strategy
+Graphic zones live in:
 
-Booth wall structure and accessories should be separate.
+`data/graphicZones.js`
 
-Current booth wall GLB:
+Current zones:
 
-`public/models/booths/bm101.glb`
+* Back Wall Graphic
+  * target material: `MAT_graphic_backwall`
+  * recommendation: `2000 × 1625 px`
+  * aspect ratio: `2000 / 1625`
+* Counter Graphic
+  * target material: `MAT_graphic_counter`
+  * recommendation: `1000 × 1000 px`
+  * aspect ratio: `1 / 1`
 
-Current counter accessory GLB:
+Upload constraints:
 
-`public/models/accessories/bm-counter.glb`
+* JPG/JPEG only
+* max 2MB per graphic
+* browser-only preview
+* no database
+* no permanent storage
 
-The booth package can include a counter from a user/business standpoint, but technically the counter should be loaded as an included accessory so it can eventually be movable, rotatable, and resettable.
+Current behavior:
 
-Carpet/flooring should be app-controlled and should not be part of the booth GLB.
+* Non-JPG files are rejected.
+* Files over 2MB are rejected.
+* Smaller-than-recommended images are allowed with a warning.
+* Correct-ratio images apply directly.
+* Wrong-ratio images open `CropModal`.
+* Crop uses `react-easy-crop`.
+* Cropped output is generated in-browser as a JPG blob URL.
+* Changing booth size/layout clears uploaded graphics.
+* Changing flooring does not clear uploaded graphics.
+* Default GLB material textures remain visible until replaced by user uploads.
 
-## Blender / Export Naming Standards
+Material handling:
 
-Booth wall object names should be booth-specific.
-
-Example BM101 object names:
-
-* `BM101_ROOT`
-* `BM101_structure_metal`
-* `BM101_structure_panels`
-* `BM101_graphic_backwall`
-
-Counter object names:
-
-* `BM_COUNTER_ROOT`
-* `BM_counter_structure_metal`
-* `BM_counter_structure_panels`
-* `BM_counter_graphic_front`
-
-Object names can be booth/accessory-specific. Material names should remain shared and predictable.
-
-Models should be exported at real scale when possible. Avoid arbitrary app-side scaling unless needed to correct a clear import issue.
+* GLB materials are preserved by default.
+* The app only swaps maps on targeted material names.
+* Do not globally override all GLB materials or textures.
 
 ## Material Naming Standards
 
-BM101 booth wall uses:
+BM101 booth wall:
 
 * `MAT_structure_metal`
 * `MAT_structure_panels`
 * `MAT_graphic_backwall`
 
-BM Counter uses:
+BM Counter:
 
 * `MAT_structure_metal`
 * `MAT_structure_panels`
@@ -264,62 +260,49 @@ Graphic-specific materials:
 * `MAT_graphic_backwall`
 * `MAT_graphic_counter`
 
-The app should preserve GLB materials by default.
+Expected object naming direction:
 
-Do not globally override every mesh with one material or texture.
+* booth objects should be booth-specific, such as `BM101_structure_panels`
+* counter objects should be accessory-specific, such as `BM_counter_graphic_front`
+* material names should remain shared and predictable
 
-If material logic is needed, target known material names only:
+## 3D Scene
 
-* `MAT_structure_metal`
-* `MAT_structure_panels`
-* `MAT_graphic_backwall`
-* `MAT_graphic_counter`
+Scene component:
 
-The backwall and counter graphic textures are currently working. Be careful not to break them.
+`src/components/CanvasScene.jsx`
 
-## Accessory / Counter Strategy
+Current behavior:
 
-The BM Counter is included with current booth packages.
+* Loads the selected booth wall GLB.
+* Loads included accessories separately from the booth wall.
+* Loads BM Counter as a separate included accessory.
+* Uses fallback placeholder booth geometry only if the booth GLB is empty or fails.
+* Uses a transparent Three.js canvas over a CSS radial gradient.
+* Uses a larger scene grid under the floor slab.
+* Uses OrbitControls with pan disabled.
+* Uses separate desktop/mobile camera positions.
 
-It should:
+Current camera/grid/environment:
 
-* load automatically with the selected booth
-* stay separate from the booth wall model
-* use `/models/accessories/bm-counter.glb`
-* have a default position in front of the back wall
-* have a default rotation
-* be treated as an included accessory
-* not be deletable yet
+* Camera target: `[0, 1, 0]`
+* Desktop camera position: `[2.2, 2.25, 7.5]`
+* Mobile camera position: `[2.7, 2.4, 9.6]`
+* Grid size: `12`
+* Grid divisions: `24`
+* Grid colors: `#cbd5e1` and `#e2e8f0`
+* Grid Y: `-0.0187`
 
-Current counter placement controls:
+Scale:
 
-* The included counter is treated as the active included accessory.
-* `src/App.jsx` stores counter position and rotation in React state.
-* `src/components/CounterPlacementControls.jsx` renders the canvas overlay control pad.
-* Movement uses X/Z scene axes only.
-* Movement step is 0.1 meter per click/tap.
-* Rotation step is 15 degrees per click/tap around the Y axis.
-* The control pad supports move left, move right, move forward, move back, rotate left, rotate right, and reset.
-* Changing booth layout resets the counter to that booth's default position and rotation.
-* Changing carpet/flooring or uploaded graphics does not reset the counter.
-* Collision detection is intentionally not implemented yet.
-* Out-of-bounds limits are intentionally not implemented yet.
-* The included counter cannot be deleted.
+* The app/model scale is treated as meters.
+* 10x10 floor size is `3.048 × 3.048`.
+* 10x20 floor size is `6.096 × 3.048`.
+* Floor thickness is `0.0127`, equal to 0.5 inches.
 
-## Flooring Strategy
+## Flooring And Carpet
 
-Flooring/carpet is app-controlled, not part of the booth GLB.
-
-Floor should:
-
-* be 10x10 for 10x10 booths
-* be 20x10 for 10x20 booths
-* use selectable carpet/floor options similar to Build-a-Booth
-* remain selected when switching booth layouts
-* keep the same flooring selection when switching booth size, but resize the floor
-* receive shadows if shadows are enabled
-
-Current flooring config:
+Flooring config lives in:
 
 `data/flooring.js`
 
@@ -327,325 +310,150 @@ Current carpet texture folder:
 
 `public/textures/carpet`
 
-Runtime texture paths:
+Current behavior:
 
-`/textures/carpet/<filename>`
+* Flooring is app-controlled, not a GLB.
+* The floor is a thin Three.js box/slab, not a plane.
+* The floor receives shadows.
+* Selected carpet texture is applied to top, bottom, and visible sides.
+* 10x10 repeat is effectively `1 × 1`.
+* 10x20 repeat is effectively `2 × 1`.
+* Texture clones are used so repeat/wrapping settings do not mutate shared loaded textures.
+* Flooring selection persists when switching booth layouts and booth sizes.
+* Switching booth size resizes the floor but keeps the selected flooring option.
 
-Current implementation details:
+Current flooring categories:
 
-* `src/App.jsx` owns selected flooring state.
-* `src/components/RightPanel.jsx` renders Build-a-Booth-style Standard Carpet and Premium Carpet & Flooring swatches.
-* `src/components/CanvasScene.jsx` creates the carpet as a thin Three.js slab/box, not a GLB.
-* The loaded BM101 and counter GLBs are currently treated as meter-scale assets.
-* BM101 measured bounds are approximately 2.9777 wide x 2.4182 high x 0.0623 deep.
-* BM Counter measured bounds are approximately 1.0414 wide x 1.0172 high x 0.6467 deep.
-* The floor slab is 3.048 x 3.048 for 10x10 booths.
-* The floor slab is 6.096 x 3.048 for 10x20 booths.
-* The floor slab thickness is 0.0127, which represents 0.5 inches in meter-scale scene units.
-* The carpet texture is applied to the slab's top, bottom, and visible sides.
-* Texture repeat is 1 x 1 for 10x10 and 2 x 1 for 10x20 to avoid stretching the 1:1 texture files.
-* Slab edge materials use cloned versions of the selected carpet texture with simple edge repeat settings.
-* The cached loaded texture is cloned before repeat/wrapping is configured, so repeat settings do not leak between booth sizes.
-* Development-only bounds logging reports booth, counter, and floor dimensions once per loaded item/size.
+* Standard Carpet
+* Premium Carpet & Flooring
 
-Use `public/textures` for actual 3D textures.
+Default flooring:
 
-## Scene Environment Direction
+* `silver-dollar`
 
-The scene environment should closely mirror the existing Build-a-Booth visual style.
+## Included Counter Accessory
 
-Current environment details:
+The counter is an included accessory from a user/business standpoint, but technically it is separate from the booth wall GLB.
 
-* `src/index.css` uses the same subtle radial gradient background style as Build-a-Booth.
-* The Three.js canvas remains transparent so the CSS gradient sits behind the scene.
-* `src/components/CanvasScene.jsx` uses a larger `gridHelper`, similar to Build-a-Booth, instead of a floor-footprint-only grid.
-* The scene grid is 12 meter-scale units wide with 24 divisions.
-* The grid uses Build-a-Booth-style colors: `#cbd5e1` and `#e2e8f0`.
-* The grid is positioned at `-0.0187`, just below the flooring slab bottom, so the floor appears to sit on top of the larger grid.
-* The grid should remain visible around the outside of both 10x10 and 10x20 flooring footprints.
-* Preserve the current camera/orbit setup unless the user specifically asks to change it.
+Counter config:
 
-## Thumbnail Strategy
-
-Booth thumbnails should use images from:
-
-`public/thumbnails/booths`
-
-Thumbnails are for the welcome modal and right-side booth selection cards.
-
-Current thumbnail implementation:
-
-* Featured welcome size cards use `BM10x10_Featured.jpg` and `BM10x20_Featured.jpg`.
-* 10x10 booth thumbnails use `public/thumbnails/booths/10x10/BM###-View-1_Thumbnail.jpg`.
-* 10x20 booth thumbnails use `public/thumbnails/booths/10x20/BM###-View-1_Thumbnail.jpg`.
-* Featured and booth thumbnail images use `object-fit: contain` so the full render is visible.
-* The welcome size cards show only the size title, such as `10 x 10 Rental Exhibits`.
-* The welcome booth selection step uses a 5-column thumbnail grid on desktop.
-* Welcome booth cards show only the full booth name below the thumbnail.
-* The right panel booth selection uses a 3-column thumbnail grid.
-* Mobile keeps responsive behavior with fewer columns.
-
-## Graphic Upload Direction
-
-Each booth layout will have graphic upload surfaces based on known material names.
-
-Current graphic zones:
-
-* Back Wall Graphic targets `MAT_graphic_backwall`.
-* Back Wall Graphic recommended preview size is 2000 x 1625 px.
-* Counter Graphic targets `MAT_graphic_counter`.
-* Counter Graphic recommended preview size is 2000 x 2000 px.
-
-Current user workflow:
-
-1. Select booth layout.
-2. Upload a JPG for the backwall.
-3. Upload a JPG for the counter front.
-4. If the aspect ratio does not match, crop the image in-browser.
-5. App applies images to the corresponding graphic materials.
-
-Constraints:
-
-* JPG only
-* max file size: 2MB per graphic
-* browser-only preview
-* no database
-* no permanent storage
-* changing booth layout should clear uploaded booth-specific graphics
-* changing carpet/flooring should not clear uploaded graphics
-* uploaded file is for preview only, not final production artwork
-
-Current implementation details:
-
-* `react-easy-crop` provides the fixed-aspect crop modal.
-* Users can reposition and zoom wrong-ratio images before applying the crop.
-* Cropped previews are generated in-browser as JPG blob URLs.
-* The scene preserves GLB materials by default and only swaps the targeted graphic material map.
-* Default model graphic textures remain visible until replaced by user uploads.
-* Uploaded/cropped graphic state lives only in React/browser memory and is not persisted.
-
-### Wrong Image Dimensions
-
-The app checks uploaded JPG dimensions against the zone's recommended preview dimensions.
+* id: `included-bm-counter`
+* model path: `/models/accessories/bm-counter.glb`
+* default position: `[0, 0, 0.30]`
+* default rotation: `[0, 0, 0]`
+* movement step: `0.1` meter
+* rotation step: `15` degrees
 
 Current behavior:
 
-* Reject non-JPG files.
-* Reject files over 2MB.
-* Warn if an image is smaller than the recommended preview size because it may appear blurry.
-* Apply images directly when the aspect ratio matches closely.
-* Open the crop modal when the aspect ratio does not match.
+* The counter loads automatically with the selected booth.
+* The counter can be selected directly in the 3D scene.
+* Clicking/tapping empty canvas deselects the counter.
+* The controller appears only when the counter is selected.
+* The counter cannot be deleted.
+* Collision detection is not implemented.
+* Out-of-bounds limits are not implemented.
+* Booth wall, flooring, and multi-select are not selectable.
 
-## Furniture Direction
+Pivot/outline behavior:
 
-MVP furniture should start small.
+* Counter placement uses an outer movable group for position.
+* Counter rotation uses an inner centered pivot group.
+* The pivot group is placed at the loaded counter bounds center on X/Z.
+* The visible GLB is offset back inside the pivot group so existing placement values stay stable.
+* Rotation is around the vertical Y axis.
+* The orange selected outline is a single padded object-level bounding box.
+* The outline is attached to the same centered pivot group and rotates with the counter.
 
-Initial furniture items:
+## Custom SVG Controller
 
-* Bar table
-* Bar stool
+Controller asset:
 
-Later furniture/accessory possibilities:
+`public/controller.svg`
 
-* Coffee tables
-* Cafe tables
-* Couches
-* Loveseats
-* Chairs
-* Standard chairs
-* Other accessories
+Component:
 
-Furniture requirements:
+`src/components/CounterPlacementControls.jsx`
 
-* Users can add multiple instances.
-* Users can select an item.
-* Users can rotate selected item.
-* Users can delete selected item.
-* Furniture should stay within the booth footprint.
-* Do not enforce collision between furniture items in MVP.
-* Do not enforce collision with walls/counters in MVP.
-* No physics.
+Current behavior:
 
-Preferred MVP movement approach:
+* Rendered as an image with transparent HTML button hit regions.
+* Hidden until the included counter is selected.
+* Centered near the bottom of the canvas.
+* Desktop width: `clamp(150px, 13vw, 190px)`.
+* Mobile width: `clamp(160px, 48vw, 210px)`.
+* Uses a soft drop shadow.
+* Pointer events are stopped so controller taps do not orbit the scene.
 
-* Button-based move controls instead of 3D transform arrows
-* Move forward/back/left/right
-* Rotate left/right by 15 degrees
-* Delete selected item
+Control mapping:
 
-Button controls are preferred because they are more reliable on mobile and less likely to conflict with orbit controls.
+* Left arrow moves left.
+* Right arrow moves right.
+* Upper-left rotate arrow rotates counterclockwise.
+* Upper-right rotate arrow rotates clockwise.
+* Reset calls the existing counter reset function.
+* The visual up/down movement mapping has been reversed to feel correct:
+  * visual up button calls back movement
+  * visual down button calls forward movement
 
-Changing booth size/layout should probably reset added furniture placement.
+## Header And Branding
 
-## Export Direction
+Current logo component:
 
-The app should eventually support JPG export.
+`src/components/SourceOneLogo.jsx`
 
-Preferred export behavior:
+Current logo asset:
 
-* 4:3 image
-* white background
-* grid hidden
-* gradient hidden
-* shadows visible
-* uploaded graphics visible
-* furniture/accessories visible
-* SourceOne Events watermark always visible
+`public/images/SourceOne-Logo-RGB.svg`
 
-Export options to consider:
+Used in:
 
-* Export current view
-* Export preset views: front, perspective, top
-* Export all preset views as separate JPGs
+* welcome modal header
+* mobile top bar
+* right panel header
 
-Potential strategy:
+## Performance Settings
 
-* Allow users to configure freely.
-* Gate high-quality export behind the follow-up form.
-* After successful form submission, download the JPG preview automatically.
+Current performance-related settings:
 
-This export gating is not final and can be revisited.
+* Canvas DPR capped with `dpr={[1, 1.5]}`.
+* `frameloop="demand"` is enabled.
+* WebGL context uses `powerPreference: 'high-performance'`.
+* Canvas alpha is enabled and clear alpha is set to 0.
+* GLB scene cloning has been avoided.
+* GLB materials are preserved by default.
+* Shadows are reduced: accessory models can cast shadows; GLB meshes do not all receive shadows.
+* Flooring texture clones are disposed on cleanup.
+* Uploaded textures are disposed/revoked when replaced or cleared.
+* GLB and flooring textures are preloaded.
 
-## Form Submission Direction
+## Current Known Limitations
 
-The form will eventually send a follow-up request to:
-
-`exhibitorservices@sourceoneevents.com`
-
-Internal email should include:
-
-* name
-* company
-* email
-* phone
-* show name
-* show date
-* booth number
-* selected booth name
-* selected booth code
-* booth size
-* booth type
-* selected furniture/accessories
-* uploaded JPG filename
-* notes
-* preview image if feasible
-
-User should receive a simple confirmation email.
-
-Captcha/spam protection will be considered later, likely Cloudflare or Google reCAPTCHA.
-
-Do not build form submission yet unless specifically requested.
+* All booth options temporarily use BM101 model geometry.
+* Real BM102-BM110 and BM201-BM210 GLBs are not integrated yet.
+* Optional furniture has not been implemented.
+* Counter/furniture bounds limits are not implemented.
+* Collision detection is not implemented.
+* Export JPG workflow is not implemented.
+* Contact/follow-up form is not implemented.
+* No database or storage exists.
+* No production artwork validation exists.
+* Continued mobile testing is needed as controls and assets evolve.
+* Controller/outline behavior should be monitored as more selectable accessories are added.
 
 ## Deployment Direction
 
 The app will eventually be hosted on the main SourceOne Events website.
 
-Current plan:
+Current deployment assumptions:
 
 * Develop locally first.
 * Build as a standalone app.
 * No Vercel.
 * No subdomain.
 * Not embedded directly inside the WordPress theme.
-* Likely deployed similarly to the existing Build-a-Booth app.
-* Updates may be handled by local build and FTP upload.
-
-Need to confirm with the dev team how the existing Build-a-Booth app is currently deployed.
-
-## Current Architecture
-
-Current app stack:
-
-* Vite
-* React
-* React Three Fiber
-* Drei
-* Three.js
-
-Key files:
-
-* `src/App.jsx` - app state and main shell
-* `src/components/CanvasScene.jsx` - Three.js scene, GLB loading, floor/grid/camera/orbit
-* `src/components/WelcomeModal.jsx` - two-step start flow
-* `src/components/RightPanel.jsx` - right-side/mobile control panel
-* `src/index.css` - app styling
-* `data/booths.js` - current central booth config
-* `data/flooring.js` - current central carpet/flooring config
-
-## Current Completed Milestones
-
-The first app foundation is complete.
-
-Current working foundation includes:
-
-* full-screen React/Three configurator shell
-* gradient background
-* floor grid
-* orbit controls
-* two-step welcome modal
-* size selection
-* booth layout selection
-* right-side panel
-* central booth data/config
-* all 20 MVP booth options in config, BM101-BM110 and BM201-BM210
-* BM101 real booth wall model loading
-* BM Counter loading separately as an included accessory
-* app-controlled carpet/flooring system
-* meter-scale 10x10 and 20x10 carpet floor resizing
-* thin flooring slab replacing the previous flat plane
-* larger Build-a-Booth-style scene grid below the floor slab
-* Build-a-Booth-matched radial gradient scene background
-* selected carpet texture applied to slab top and sides
-* featured welcome size images
-* booth thumbnail images in welcome layout selection
-* 3-column right-panel booth thumbnail grid
-* browser-only JPG graphic uploads for backwall and counter
-* fixed-aspect crop workflow for wrong-ratio graphics
-* targeted texture replacement for `MAT_graphic_backwall` and `MAT_graphic_counter`
-* included counter movement and rotation overlay controls
-* Build-a-Booth-style carpet/flooring right-panel swatches
-* right panel showing included booth items
-* graphic textures working for backwall and counter
-* performance pass completed
-* flooring scale/bounds diagnostic pass completed
-
-Performance improvements already made:
-
-* Canvas DPR capped with `dpr={[1, 1.5]}`
-* `frameloop="demand"` added
-* GLB scene cloning removed
-* fallback placeholder wall only renders when real GLB is empty or fails
-* shadow cost reduced
-* GLB materials preserved instead of mutated globally
-* flooring textures configured from cached texture clones to avoid mutating shared texture instances
-
-Verification from latest pass:
-
-* `npm run lint` passes
-* `npm run build` passes
-* BM101 loads once
-* BM Counter loads once
-* carpet/flooring options render in the right panel
-* welcome size cards use featured 10x10 and 10x20 images
-* welcome booth selection shows 10 booth thumbnails per selected size in a 5-column desktop grid
-* right panel booth selection shows 10 booth thumbnails per selected size in a 3-column grid
-* backwall upload replaces `MAT_graphic_backwall`
-* counter upload replaces `MAT_graphic_counter`
-* wrong-ratio uploads open the crop workflow
-* small images show a warning but are allowed
-* non-JPG and over-2MB files are rejected
-* changing booth layout clears uploaded graphics
-* counter can move left/right/front/back by 0.1 meter per click
-* counter can rotate left/right by 15 degrees per click
-* changing booth layout resets counter placement
-* selected carpet persists when switching booth layouts and booth sizes
-* 10x10 booths show a 3.048 x 3.048 meter-scale carpet slab
-* 10x20 booths show a 6.096 x 3.048 meter-scale carpet slab
-* flooring no longer disappears when orbiting below the scene
-* larger grid extends beyond the flooring footprint and sits below the slab
-* carpet texture appears on visible slab edges
-* backwall and counter graphic textures display correctly
-* welcome flow, right panel, and mobile drawer still work
+* Likely deployed similarly to Build-a-Booth.
+* Need to confirm the existing Build-a-Booth deployment/update process.
 
 ## Guardrails For Future Codex Work
 
@@ -657,18 +465,22 @@ Do not modify:
 
 `/Users/andrewhodgson/Documents/build-a-booth`
 
-Preserve the working GLB material setup unless there is a clear bug.
+Preserve:
 
-Do not globally overwrite GLB materials or textures.
+* BM101 model loading
+* BM Counter separate accessory loading
+* GLB material names and targeted texture swapping
+* app-controlled flooring
+* selected counter controller/outline behavior
+* welcome flow
+* right panel structure
+* mobile drawer behavior
+* capped DPR and `frameloop="demand"`
 
 Do not overbuild. Keep the app phased, stable, and easy to understand.
 
-When making frontend/scene changes:
+When making app changes:
 
-* preserve the desktop/mobile layout
-* preserve the welcome flow
-* preserve the right panel structure
-* preserve orbit controls unless specifically asked
 * run `npm run lint`
 * run `npm run build`
 * visually check the app when practical

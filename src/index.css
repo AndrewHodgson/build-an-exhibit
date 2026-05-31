@@ -80,102 +80,99 @@ dd {
   backdrop-filter: blur(10px);
 }
 
-.counter-controls {
+.counter-controller {
   position: absolute;
-  left: 16px;
-  bottom: 96px;
+  bottom: 24px;
+  left: 50%;
   z-index: 12;
-  display: grid;
-  width: min(260px, calc(100vw - 32px));
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 12px;
-  box-shadow: 0 14px 36px rgba(31, 41, 55, 0.14);
-  backdrop-filter: blur(14px);
+  width: clamp(150px, 13vw, 190px);
+  aspect-ratio: 995.84 / 795.37;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 14px 30px rgba(31, 41, 55, 0.2));
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.counter-controls-header {
-  display: grid;
-  gap: 2px;
-}
-
-.counter-controls-header p {
-  color: var(--sourceone-blue);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.counter-controls-header span {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.counter-move-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.counter-move-grid button:first-child,
-.counter-move-grid button:last-child {
-  grid-column: 2;
-}
-
-.counter-move-grid button:nth-child(2) {
-  grid-column: 1;
-}
-
-.counter-move-grid button:nth-child(3) {
-  grid-column: 3;
-}
-
-.counter-rotate-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.counter-controls button {
-  min-height: 42px;
-  cursor: pointer;
-  border: 1px solid #d9dee7;
-  border-radius: 7px;
-  background: #fff;
-  color: #374151;
-  padding: 8px 9px;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.15;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.counter-controls button:hover {
-  border-color: #9aa5b3;
-}
-
-.counter-reset-button {
+.counter-controller-art {
+  display: block;
   width: 100%;
-  color: var(--sourceone-blue) !important;
+  height: auto;
+  pointer-events: none;
 }
 
-.brand-mark {
-  display: inline-grid;
-  width: 31px;
-  height: 31px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 6px;
-  background: var(--sourceone-blue);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
+.controller-hit {
+  position: absolute;
+  cursor: pointer;
+  touch-action: manipulation;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.controller-hit:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+}
+
+.controller-hit-rotate-left {
+  top: 11.5%;
+  left: 9.5%;
+  width: 24%;
+  height: 18%;
+}
+
+.controller-hit-rotate-right {
+  top: 11.5%;
+  left: 66.8%;
+  width: 24%;
+  height: 18%;
+}
+
+.controller-hit-up {
+  top: 9%;
+  left: 40%;
+  width: 20%;
+  height: 36%;
+}
+
+.controller-hit-left {
+  top: 37%;
+  left: 16%;
+  width: 29%;
+  height: 24%;
+}
+
+.controller-hit-right {
+  top: 37%;
+  left: 54.5%;
+  width: 30%;
+  height: 25%;
+}
+
+.controller-hit-down {
+  top: 55%;
+  left: 40%;
+  width: 20%;
+  height: 36%;
+}
+
+.controller-hit-reset {
+  top: 81%;
+  left: 71%;
+  width: 24%;
+  height: 13%;
+}
+
+.sourceone-logo {
+  display: block;
+  width: 156px;
+  max-width: 100%;
+  height: auto;
+  flex: 0 1 auto;
+}
+
+.mobile-logo {
+  width: clamp(130px, 36vw, 160px);
 }
 
 .mobile-topbar {
@@ -193,10 +190,14 @@ dd {
 .modal-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  min-width: 0;
   color: var(--ink);
   font-size: 13px;
   font-weight: 800;
+}
+
+.panel-brand {
+  max-width: 190px;
 }
 
 .right-panel {
@@ -861,12 +862,9 @@ dd {
     display: none;
   }
 
-  .counter-controls {
-    top: auto;
-    right: 16px;
-    bottom: calc(env(safe-area-inset-bottom) + 16px);
-    left: 16px;
-    width: auto;
+  .counter-controller {
+    bottom: calc(env(safe-area-inset-bottom) + 20px);
+    width: clamp(160px, 48vw, 210px);
   }
 
   .mobile-topbar {

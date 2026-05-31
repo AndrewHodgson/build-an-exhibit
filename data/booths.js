@@ -19,7 +19,7 @@ const INCLUDED_COUNTER = {
   name: 'Reception counter',
   type: 'included-accessory',
   modelPath: '/models/accessories/bm-counter.glb',
-  position: [0.9, 0, 0.72],
+  position: [0, 0, 0.30],
   rotation: [0, 0, 0],
 }
 

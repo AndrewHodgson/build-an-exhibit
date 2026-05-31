@@ -1,4 +1,10 @@
-import { OrbitControls, PerspectiveCamera, useGLTF, useTexture } from '@react-three/drei'
+import {
+  Edges,
+  OrbitControls,
+  PerspectiveCamera,
+  useGLTF,
+  useTexture,
+} from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import {
   Component,
@@ -29,6 +35,8 @@ const FLOOR_THICKNESS = 0.0127
 const SCENE_GRID_SIZE = 12
 const SCENE_GRID_DIVISIONS = 24
 const SCENE_GRID_Y = -FLOOR_THICKNESS - 0.006
+const SELECTED_OUTLINE_COLOR = '#f97316'
+const SELECTED_OUTLINE_PADDING = 0.035
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
@@ -427,6 +435,74 @@ function applyGraphicTextures(scene, graphicTextureUrls, invalidate) {
   }
 }
 
+function getLocalObjectBounds(object) {
+  if (!object) {
+    return null
+  }
+
+  object.updateWorldMatrix(true, true)
+
+  const objectWorldInverse = object.matrixWorld.clone().invert()
+  const box = new Box3()
+  const meshBox = new Box3()
+
+  object.traverse((child) => {
+    if (!child.isMesh || !child.geometry?.attributes?.position) {
+      return
+    }
+
+    if (!child.geometry.boundingBox) {
+      child.geometry.computeBoundingBox()
+    }
+
+    meshBox
+      .copy(child.geometry.boundingBox)
+      .applyMatrix4(child.matrixWorld)
+      .applyMatrix4(objectWorldInverse)
+    box.union(meshBox)
+  })
+
+  if (box.isEmpty()) {
+    return null
+  }
+
+  const size = new Vector3()
+  const center = new Vector3()
+
+  box.getSize(size)
+  box.getCenter(center)
+
+  return {
+    center: center.toArray(),
+    size: [
+      size.x + SELECTED_OUTLINE_PADDING,
+      size.y + SELECTED_OUTLINE_PADDING,
+      size.z + SELECTED_OUTLINE_PADDING,
+    ],
+  }
+}
+
+function SelectionOutline({ bounds }) {
+  if (!bounds) {
+    return null
+  }
+
+  const outlineCenter = [0, bounds.center[1], 0]
+
+  return (
+    <mesh position={outlineCenter} renderOrder={10}>
+      <boxGeometry args={bounds.size} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      <Edges
+        color={SELECTED_OUTLINE_COLOR}
+        linewidth={2}
+        threshold={15}
+        renderOrder={11}
+      />
+    </mesh>
+  )
+}
+
 function LoadedModel({
   debugLabel,
   modelPath,
@@ -435,10 +511,19 @@ function LoadedModel({
   onStatusChange,
   graphicTextureUrls = {},
   castsShadow = false,
+  isSelected = false,
+  onSelect,
+  centerPivot = false,
 }) {
   const { scene } = useGLTF(modelPath)
   const invalidate = useThree((state) => state.invalidate)
   const isRenderable = useMemo(() => hasRenderableGeometry(scene), [scene])
+  const bounds = useMemo(() => getLocalObjectBounds(scene), [scene])
+  const pivotOffset = centerPivot && bounds ? bounds.center : [0, 0, 0]
+  const modelOffset = centerPivot
+    ? [-pivotOffset[0], 0, -pivotOffset[2]]
+    : [0, 0, 0]
+  const pivotPosition = centerPivot ? [pivotOffset[0], 0, pivotOffset[2]] : [0, 0, 0]
 
   useEffect(() => {
     prepareSceneForPreview(scene, { castsShadow })
@@ -462,7 +547,29 @@ function LoadedModel({
     return null
   }
 
-  return <primitive object={scene} position={position} rotation={rotation} />
+  return (
+    <group
+      position={position}
+      onClick={(event) => {
+        if (!onSelect) {
+          return
+        }
+
+        event.stopPropagation()
+        onSelect()
+      }}
+      onPointerDown={(event) => {
+        if (onSelect) {
+          event.stopPropagation()
+        }
+      }}
+    >
+      <group position={pivotPosition} rotation={rotation}>
+        <primitive object={scene} position={modelOffset} />
+        {isSelected && <SelectionOutline bounds={bounds} />}
+      </group>
+    </group>
+  )
 }
 
 class ModelErrorBoundary extends Component {
@@ -496,6 +603,9 @@ export default function CanvasScene({
   flooring,
   graphicUploads,
   accessoryPlacements,
+  selectedAccessoryId,
+  onAccessorySelect,
+  onSceneDeselect,
 }) {
   const isMobile = useIsMobileViewport()
   const [boothModelState, setBoothModelState] = useState({
@@ -536,6 +646,7 @@ export default function CanvasScene({
       frameloop="demand"
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => gl.setClearAlpha(0)}
+      onPointerMissed={onSceneDeselect}
     >
       <PerspectiveCamera
         makeDefault
@@ -565,6 +676,9 @@ export default function CanvasScene({
               rotation={accessoryPlacements[accessory.id]?.rotation ?? accessory.rotation}
               graphicTextureUrls={counterGraphicTextureUrls}
               castsShadow
+              isSelected={selectedAccessoryId === accessory.id}
+              onSelect={() => onAccessorySelect?.(accessory.id)}
+              centerPivot
             />
           </ModelErrorBoundary>
         ))}

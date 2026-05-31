@@ -2,89 +2,60 @@
 
 ## Current Status
 
-Build an Exhibit has a working early MVP foundation: full-screen React/Three scene, Build-a-Booth-inspired UI, two-step welcome modal, right-side control panel, BM101 real booth wall model loading, BM Counter loading separately as an included controllable accessory, app-controlled carpet/flooring, all 20 MVP booth options in config, and browser-only graphic upload/crop previews.
+Build an Exhibit is a working early MVP foundation for configuring SourceOne Events BeMatrix rental exhibits.
 
-The current BM101 backwall graphic and BM Counter graphic textures display correctly. A basic performance pass has already been completed, and the carpet/flooring system now uses selectable texture swatches, meter-scale booth-size-based floor resizing, and a thin textured slab instead of a flat plane. The scene grid and gradient background have been refined to more closely match Build-a-Booth, real booth thumbnail images now appear in the welcome flow and right panel, uploaded JPG previews can replace the backwall and counter graphic materials, and the included counter can be moved/rotated with a canvas overlay.
+Currently working:
 
-## Active Priority
+* full-screen React/Three scene with Build-a-Booth-inspired gradient, grid, camera, and orbit behavior
+* two-step welcome modal for booth size and booth layout selection
+* SourceOne SVG logo in the header, welcome modal, and mobile drawer
+* right-side panel with one-or-zero-open-section accordion behavior
+* all 20 MVP booth options in config: BM101-BM110 and BM201-BM210
+* BM101 booth wall GLB loading as the current real test booth asset
+* BM Counter GLB loading separately as an included accessory
+* app-controlled meter-scale flooring/carpet slab with selectable textures
+* JPG upload/crop previews for the backwall and counter graphic materials
+* counter selection, orange object-level outline, movement, rotation, and reset
+* selected-only custom SVG counter controller using `public/controller.svg`
 
-Next recommended work:
+Graphic recommendations:
 
-1. Plan optional furniture item support.
-2. Then refine export/contact flow planning.
-3. Then polish graphic upload UI based on real user testing.
-
-## Immediate Next Task
-
-Plan optional furniture item support without disrupting the current BM101/BM Counter material setup.
-
-Optional furniture work should:
-
-* start with a small set of furniture items
-* support selecting, moving, rotating, and deleting user-added items
-* prefer button-based movement controls for mobile reliability
-* avoid changing the working BM101/BM Counter model setup
-* keep the included counter non-deletable
-* avoid changing the working flooring/carpet system
-* preserve the working graphic upload/crop behavior
+* Back Wall Graphic: `2000 × 1625 px`, JPG only, max 2MB
+* Counter Graphic: `1000 × 1000 px`, JPG only, max 2MB
 
 ## Known Issues / Watch Items
 
-* Monitor performance as more thumbnail and texture assets are added.
-* All 20 booth options temporarily point to `/models/booths/bm101.glb` until final GLBs are prepared.
-* Back Wall Graphic targets `MAT_graphic_backwall`, recommended 2000 x 1625 px.
-* Counter Graphic targets `MAT_graphic_counter`, recommended 2000 x 2000 px.
-* Graphic uploads are JPG only, max 2MB, browser-only, and not stored.
-* Wrong-ratio graphics use the `react-easy-crop` modal before applying.
-* Make sure carpet texture size/repeat does not create sluggishness.
-* Counter placement movement step is 0.1 meter per click/tap.
-* Counter placement rotation step is 15 degrees per click/tap.
-* Counter collision detection and out-of-bounds limits are intentionally not implemented yet.
-* Preserve the current practical scene scale: GLBs are meter-scale, so 10x10 flooring is 3.048 x 3.048 and 10x20 flooring is 6.096 x 3.048.
-* Keep floor thickness at 0.0127 scene units unless the model export scale changes.
-* Keep the larger Build-a-Booth-style grid below the floor slab, not intersecting the carpet.
-* Keep the Three.js canvas transparent so the Build-a-Booth-style CSS radial gradient remains visible behind the scene.
-* Do not break the working BM101/BM Counter material setup.
-* Do not reset flooring when switching booth layouts.
-* Make sure the counter stays separate from the booth wall model.
-* Preserve the current desktop/mobile layout and orbit controls.
-* Keep `MAT_graphic_backwall` and `MAT_graphic_counter` working.
-* Keep flooring app-controlled; do not add a flooring GLB.
+* All booth options temporarily use `/models/booths/bm101.glb`.
+* Real BM102-BM110 and BM201-BM210 booth models have not been added yet.
+* The included counter is separate from the booth wall GLB and should stay that way.
+* No bounds limits exist for counter movement yet.
+* No collision detection exists yet.
+* No optional furniture/accessory system exists yet.
+* No JPG export workflow exists yet.
+* No contact/follow-up form or submission workflow exists yet.
+* Graphic previews are browser-only and are not production artwork validation.
+* Flooring is app-controlled, not a GLB.
+* App/model scale is meters: 10x10 floor is `3.048 × 3.048`, 10x20 floor is `6.096 × 3.048`, floor thickness is `0.0127`.
+* Carpet textures should be monitored for performance and repeat quality as more texture assets are added.
+* Counter/controller/outline behavior should be retested when additional accessories are introduced.
+* Continue mobile testing as the right panel, crop modal, and controller become denser.
+* Preserve the current material targeting; do not globally override GLB materials.
+* The Vite production build may warn about large chunks as Three.js dependencies grow.
 
-## Completed
+## Recommended Next Tasks
 
-* Foundation app shell
-* Welcome modal
-* Right panel
-* Central booth data/config
-* All 20 MVP booth config records: BM101-BM110 and BM201-BM210
-* BM101 real model integration
-* BM Counter separate accessory integration
-* Material naming update
-* Backwall graphic texture display
-* Counter graphic texture display
-* Included booth items shown in right panel
-* Performance pass
-* Carpet/flooring system
-* Standard and premium carpet swatches
-* 10x10 floor sizing at 3.048 x 3.048 meter-scale units
-* 20x10 floor sizing at 6.096 x 3.048 meter-scale units
-* Thin flooring slab with 0.0127 scene-unit thickness
-* Carpet texture applied to slab top and visible sides
-* Larger Build-a-Booth-style grid below the floor slab
-* Build-a-Booth-matched radial gradient background
-* Featured welcome size images
-* Real booth thumbnails in welcome booth selection
-* 5-column desktop welcome booth thumbnail grid
-* 3-column right-panel booth thumbnail grid
-* Backwall JPG upload and crop preview
-* Counter JPG upload and crop preview
-* 2MB JPG upload validation
-* Small-image warning behavior
-* Booth-layout changes clear uploaded graphics
-* Included counter movement and rotation overlay controls
-* Counter placement reset on booth layout change
-* Flooring scale/bounds diagnostic logging
-* Flooring persistence across booth layout and size changes
-* `npm run lint` passing
-* `npm run build` passing
+1. Add an optional furniture/accessory system.
+2. Add movement bounds for the included counter and future furniture.
+3. Add the JPG export workflow.
+4. Add the contact/follow-up form.
+5. Replace temporary BM101 model references with real booth-specific GLBs.
+6. Refine right panel content and booth details.
+7. Continue mobile polish and testing.
+
+## Guardrails
+
+Do not modify the old Build-a-Booth reference project unless specifically requested.
+
+Do not add form submission, export, pricing, user accounts, database/storage, production artwork validation, or additional real booth models unless specifically requested.
+
+Preserve the working BM101/BM Counter material setup, flooring system, graphic upload/crop workflow, counter controller, and mobile drawer behavior while making future changes.
