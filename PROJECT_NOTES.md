@@ -187,7 +187,7 @@ Current section status:
 
 * Booth Selection is wired to size/layout state.
 * Booth Details shows code, size, type, description, and included items.
-* Graphics is wired to backwall/counter JPG upload and crop behavior.
+* Graphics is wired to backwall/counter JPG or PNG upload and crop behavior.
 * Furniture is placeholder-only.
 * Carpet & Flooring is wired to flooring swatches.
 * Export creates a first-pass booth summary PDF.
@@ -218,16 +218,16 @@ Current zones:
 
 Upload constraints:
 
-* JPG/JPEG only
-* max 2MB per graphic
+* JPG/JPEG or PNG only
+* max 4 MB per graphic
 * browser-only preview
 * no database
 * no permanent storage
 
 Current behavior:
 
-* Non-JPG files are rejected.
-* Files over 2MB are rejected.
+* Files that are not JPG/JPEG or PNG are rejected.
+* Files over 4 MB are rejected.
 * Smaller-than-recommended images are allowed with a warning.
 * Correct-ratio images apply directly.
 * Wrong-ratio images open `CropModal`.

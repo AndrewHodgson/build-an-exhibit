@@ -14,15 +14,15 @@ Currently working:
 * BM101 booth wall GLB loading as the current real test booth asset
 * BM Counter GLB loading separately as an included accessory
 * app-controlled meter-scale flooring/carpet slab with selectable textures
-* JPG upload/crop previews for the backwall and counter graphic materials
+* JPG or PNG upload/crop previews for the backwall and counter graphic materials
 * counter selection, orange object-level outline, movement, rotation, and reset
 * selected-only custom SVG counter controller using `public/controller.svg`
 * refined one-page client-side PDF export using jsPDF
 
 Graphic recommendations:
 
-* Back Wall Graphic: `2000 × 1625 px`, JPG only, max 2MB
-* Counter Graphic: `1000 × 1000 px`, JPG only, max 2MB
+* Back Wall Graphic: `2000 × 1625 px`, JPG or PNG, max 4 MB per file
+* Counter Graphic: `1000 × 1000 px`, JPG or PNG, max 4 MB per file
 
 ## Known Issues / Watch Items
 

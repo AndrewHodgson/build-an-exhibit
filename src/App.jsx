@@ -17,8 +17,12 @@ const ASPECT_RATIO_TOLERANCE = 0.01
 const COUNTER_MOVE_STEP = 0.1
 const COUNTER_ROTATION_STEP = Math.PI / 12
 
-function isJpgFile(file) {
-  return file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(file.name)
+function isSupportedGraphicFile(file) {
+  return (
+    file.type === 'image/jpeg' ||
+    file.type === 'image/png' ||
+    /\.(jpe?g|png)$/i.test(file.name)
+  )
 }
 
 function readImageFile(file) {
@@ -202,13 +206,16 @@ export default function App() {
       return
     }
 
-    if (!isJpgFile(file)) {
-      setGraphicError(zone.id, 'Please upload a JPG file.')
+    if (!isSupportedGraphicFile(file)) {
+      setGraphicError(zone.id, 'Please upload a JPG or PNG file.')
       return
     }
 
     if (file.size > zone.maxBytes) {
-      setGraphicError(zone.id, 'File is too large. JPG uploads must be 2MB or smaller.')
+      setGraphicError(
+        zone.id,
+        'File is too large. JPG and PNG uploads must be 4 MB or smaller.',
+      )
       return
     }
 
@@ -217,7 +224,10 @@ export default function App() {
     try {
       imageDetails = await readImageFile(file)
     } catch {
-      setGraphicError(zone.id, 'Unable to read that JPG. Please choose a different file.')
+      setGraphicError(
+        zone.id,
+        'Unable to read that JPG or PNG. Please choose a different file.',
+      )
       return
     }
     const warning = getUploadWarning(zone, imageDetails.width, imageDetails.height)

@@ -129,21 +129,21 @@ function GraphicUploadZone({
         <p>
           Recommended: {zone.recommendedWidth} × {zone.recommendedHeight} px
         </p>
-        <p>JPG only, max 2MB</p>
+        <p>JPG or PNG, max 4 MB per file</p>
       </div>
 
       <input
         id={inputId}
         className="visually-hidden"
         type="file"
-        accept=".jpg,.jpeg,image/jpeg"
+        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
         onChange={(event) => {
           onGraphicFileChange(zone.id, event.target.files?.[0])
           event.target.value = ''
         }}
       />
       <label className="upload-button" htmlFor={inputId}>
-        Upload JPG
+        Upload JPG or PNG
       </label>
 
       {upload ? (
@@ -293,7 +293,7 @@ export default function RightPanel({
             onOpen={toggleSection}
           >
             <p className="panel-note">
-              Upload JPG previews for the booth graphics. Images are used only in this
+              Upload JPG or PNG previews for the booth graphics. Images are used only in this
               browser preview and are not stored.
             </p>
             {graphicZones.map((zone) => (
