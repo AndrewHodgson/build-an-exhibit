@@ -1,5 +1,4 @@
 import {
-  Edges,
   OrbitControls,
   PerspectiveCamera,
   useGLTF,
@@ -28,6 +27,8 @@ import {
   Vector3,
 } from 'three'
 import { flooringTexturePreloadPaths } from '../../data/flooring.js'
+import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
+import AccessoryTransformGizmo from './AccessoryTransformGizmo.jsx'
 
 const CAMERA_TARGET = [0, 1, 0]
 const DESKTOP_CAMERA_POSITION = [2.2, 2.25, 7.5]
@@ -38,8 +39,6 @@ const FLOOR_THICKNESS = 0.0127
 const SCENE_GRID_SIZE = 12
 const SCENE_GRID_DIVISIONS = 24
 const SCENE_GRID_Y = -FLOOR_THICKNESS - 0.006
-const SELECTED_OUTLINE_COLOR = '#f97316'
-const SELECTED_OUTLINE_PADDING = 0.035
 const EXPORT_BACKGROUND_COLOR = '#ffffff'
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
@@ -617,33 +616,24 @@ function getLocalObjectBounds(object) {
 
   return {
     center: center.toArray(),
-    size: [
-      size.x + SELECTED_OUTLINE_PADDING,
-      size.y + SELECTED_OUTLINE_PADDING,
-      size.z + SELECTED_OUTLINE_PADDING,
-    ],
+    size: size.toArray(),
   }
 }
 
-function SelectionOutline({ bounds }) {
-  if (!bounds) {
-    return null
-  }
+function cloneModelScene(scene) {
+  const clone = scene.clone(true)
 
-  const outlineCenter = [0, bounds.center[1], 0]
+  clone.traverse((object) => {
+    if (!object.isMesh || !object.material) {
+      return
+    }
 
-  return (
-    <mesh position={outlineCenter} renderOrder={10}>
-      <boxGeometry args={bounds.size} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      <Edges
-        color={SELECTED_OUTLINE_COLOR}
-        linewidth={2}
-        threshold={15}
-        renderOrder={11}
-      />
-    </mesh>
-  )
+    object.material = Array.isArray(object.material)
+      ? object.material.map((material) => material.clone())
+      : object.material.clone()
+  })
+
+  return clone
 }
 
 function LoadedModel({
@@ -651,30 +641,39 @@ function LoadedModel({
   modelPath,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
+  scale = [1, 1, 1],
   onStatusChange,
   graphicTextureUrls = {},
   castsShadow = false,
-  isSelected = false,
   onSelect,
+  dragPosition = position,
+  onPositionChange,
+  onRotationChange,
+  onDragStart,
+  onDragEnd,
+  showTransformGizmo = false,
+  allowVerticalMovement = false,
+  gizmoCenterOffsetY = 0,
   centerPivot = false,
 }) {
   const { scene } = useGLTF(modelPath)
+  const modelScene = useMemo(() => cloneModelScene(scene), [scene])
   const invalidate = useThree((state) => state.invalidate)
-  const isRenderable = useMemo(() => hasRenderableGeometry(scene), [scene])
-  const bounds = useMemo(() => getLocalObjectBounds(scene), [scene])
+  const isRenderable = useMemo(() => hasRenderableGeometry(modelScene), [modelScene])
+  const bounds = useMemo(() => getLocalObjectBounds(modelScene), [modelScene])
   const pivotOffset = centerPivot && bounds ? bounds.center : [0, 0, 0]
   const modelOffset = centerPivot
-    ? [-pivotOffset[0], 0, -pivotOffset[2]]
+    ? [-pivotOffset[0], -pivotOffset[1], -pivotOffset[2]]
     : [0, 0, 0]
-  const pivotPosition = centerPivot ? [pivotOffset[0], 0, pivotOffset[2]] : [0, 0, 0]
+  const pivotPosition = centerPivot ? pivotOffset : [0, 0, 0]
 
   useEffect(() => {
-    prepareSceneForPreview(scene, { castsShadow })
-  }, [castsShadow, scene])
+    prepareSceneForPreview(modelScene, { castsShadow })
+  }, [castsShadow, modelScene])
 
   useEffect(() => {
-    return applyGraphicTextures(scene, graphicTextureUrls, invalidate)
-  }, [graphicTextureUrls, invalidate, scene])
+    return applyGraphicTextures(modelScene, graphicTextureUrls, invalidate)
+  }, [graphicTextureUrls, invalidate, modelScene])
 
   useEffect(() => {
     onStatusChange?.(isRenderable ? 'ready' : 'empty')
@@ -682,9 +681,9 @@ function LoadedModel({
 
   useEffect(() => {
     if (isRenderable) {
-      reportBoundsOnce(modelPath, debugLabel ?? modelPath, scene)
+      reportBoundsOnce(modelPath, debugLabel ?? modelPath, modelScene)
     }
-  }, [debugLabel, isRenderable, modelPath, scene])
+  }, [debugLabel, isRenderable, modelPath, modelScene])
 
   if (!isRenderable) {
     return null
@@ -707,10 +706,26 @@ function LoadedModel({
         }
       }}
     >
-      <group position={pivotPosition} rotation={rotation}>
-        <primitive object={scene} position={modelOffset} />
-        {isSelected && <SelectionOutline bounds={bounds} />}
+      <group position={pivotPosition} rotation={rotation} scale={scale}>
+        <primitive object={modelScene} position={modelOffset} />
       </group>
+      {showTransformGizmo && (
+        <AccessoryTransformGizmo
+          position={[
+            pivotOffset[0],
+            pivotOffset[1] + gizmoCenterOffsetY,
+            pivotOffset[2],
+          ]}
+          placementPosition={dragPosition}
+          placementRotation={rotation}
+          rotationStep={ACCESSORY_ROTATION_STEP}
+          allowVerticalMovement={allowVerticalMovement}
+          onPositionChange={onPositionChange}
+          onRotationChange={onRotationChange}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
+      )}
     </group>
   )
 }
@@ -745,14 +760,20 @@ const CanvasScene = forwardRef(function CanvasScene({
   booth,
   flooring,
   graphicUploads,
+  accessories,
   accessoryPlacements,
+  addOnSettings,
   selectedAccessoryId,
   onAccessorySelect,
+  onAccessoryPositionChange,
+  onAccessoryRotationChange,
   onSceneDeselect,
   hideSelectionOutline = false,
   hideGrid = false,
 }, ref) {
   const isMobile = useIsMobileViewport()
+  const orbitControlsRef = useRef(null)
+  const [isDraggingAccessory, setIsDraggingAccessory] = useState(false)
   const [boothModelState, setBoothModelState] = useState({
     status: 'loading',
     modelPath: null,
@@ -771,19 +792,28 @@ const CanvasScene = forwardRef(function CanvasScene({
   const handleBoothError = useCallback(() => {
     setBoothModelState({ status: 'failed', modelPath: booth.modelPath })
   }, [booth.modelPath])
+  const handleAccessoryDragStart = useCallback(() => {
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.enabled = false
+    }
+    setIsDraggingAccessory(true)
+  }, [])
+  const handleAccessoryDragEnd = useCallback(() => {
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.enabled = true
+    }
+    setIsDraggingAccessory(false)
+  }, [])
   const boothGraphicTextureUrls = useMemo(
-    () => ({
-      MAT_graphic_backwall: graphicUploads.backwall?.textureUrl,
-    }),
-    [graphicUploads.backwall?.textureUrl],
+    () =>
+      Object.fromEntries(
+        (booth.graphicZones ?? []).map((zone) => [
+          zone.materialName,
+          graphicUploads[zone.id]?.textureUrl ?? zone.defaultTexturePath,
+        ]),
+      ),
+    [booth.graphicZones, graphicUploads],
   )
-  const counterGraphicTextureUrls = useMemo(
-    () => ({
-      MAT_graphic_counter: graphicUploads.counter?.textureUrl,
-    }),
-    [graphicUploads.counter?.textureUrl],
-  )
-
   return (
     <Canvas
       shadows="basic"
@@ -791,7 +821,11 @@ const CanvasScene = forwardRef(function CanvasScene({
       frameloop="demand"
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => gl.setClearAlpha(0)}
-      onPointerMissed={onSceneDeselect}
+      onPointerMissed={() => {
+        if (!isDraggingAccessory) {
+          onSceneDeselect?.()
+        }
+      }}
     >
       <PerspectiveCamera
         makeDefault
@@ -812,28 +846,72 @@ const CanvasScene = forwardRef(function CanvasScene({
           />
         </ModelErrorBoundary>
 
-        {booth.includedAccessories?.map((accessory) => (
-          <ModelErrorBoundary key={accessory.id} resetKey={accessory.modelPath}>
-            <LoadedModel
-              debugLabel={accessory.name}
-              modelPath={accessory.modelPath}
-              position={accessoryPlacements[accessory.id]?.position ?? accessory.position}
-              rotation={accessoryPlacements[accessory.id]?.rotation ?? accessory.rotation}
-              graphicTextureUrls={counterGraphicTextureUrls}
-              castsShadow
-              isSelected={selectedAccessoryId === accessory.id && !hideSelectionOutline}
-              onSelect={() => onAccessorySelect?.(accessory.id)}
-              centerPivot
-            />
-          </ModelErrorBoundary>
-        ))}
+        {accessories.flatMap((accessory) => {
+          const placement = accessoryPlacements[accessory.id] ?? accessory
+          const settings = addOnSettings[accessory.id] ?? {}
+          const quantity = Number.isInteger(accessory.defaultQuantity)
+            ? settings.quantity ?? accessory.defaultQuantity
+            : 1
+          const sizeScale = accessory.defaultSize
+            ? (settings.size ?? accessory.defaultSize) / accessory.defaultSize
+            : 1
+          const graphicTextureUrls = Object.fromEntries(
+            (accessory.graphicZones ?? []).map((zone) => [
+              zone.materialName,
+              graphicUploads[zone.id]?.textureUrl ?? zone.defaultTexturePath,
+            ]),
+          )
+
+          return Array.from({ length: quantity }, (_, index) => (
+            <ModelErrorBoundary
+              key={`${accessory.id}-${index}`}
+              resetKey={accessory.modelPath}
+            >
+              <LoadedModel
+                debugLabel={accessory.name}
+                modelPath={accessory.modelPath}
+                position={[
+                  placement.position[0],
+                  placement.position[1] - index * (accessory.verticalSpacing ?? 0),
+                  placement.position[2],
+                ]}
+                rotation={placement.rotation}
+                scale={[sizeScale, sizeScale, sizeScale]}
+                graphicTextureUrls={graphicTextureUrls}
+                castsShadow
+                onSelect={() => onAccessorySelect?.(accessory.id)}
+                dragPosition={placement.position}
+                onPositionChange={(position) =>
+                  onAccessoryPositionChange?.(accessory.id, position)
+                }
+                onRotationChange={(rotation) =>
+                  onAccessoryRotationChange?.(accessory.id, rotation)
+                }
+                onDragStart={handleAccessoryDragStart}
+                onDragEnd={handleAccessoryDragEnd}
+                showTransformGizmo={
+                  index === 0 &&
+                  selectedAccessoryId === accessory.id &&
+                  !hideSelectionOutline
+                }
+                allowVerticalMovement={Boolean(accessory.allowVerticalMovement)}
+                gizmoCenterOffsetY={
+                  -((quantity - 1) * (accessory.verticalSpacing ?? 0)) / 2
+                }
+                centerPivot
+              />
+            </ModelErrorBoundary>
+          ))
+        })}
       </Suspense>
       {(boothModelStatus === 'empty' || boothModelStatus === 'failed') && (
         <FallbackBoothModel booth={booth} />
       )}
       <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       <OrbitControls
+        ref={orbitControlsRef}
         makeDefault
+        enabled={!isDraggingAccessory}
         enablePan={false}
         minDistance={4.8}
         maxDistance={11}
@@ -847,5 +925,18 @@ const CanvasScene = forwardRef(function CanvasScene({
 export default CanvasScene
 
 useGLTF.preload('/models/booths/bm101.glb')
+useGLTF.preload('/models/booths/bm102.glb')
+useGLTF.preload('/models/booths/bm103.glb')
+useGLTF.preload('/models/booths/bm104.glb')
+useGLTF.preload('/models/booths/bm105.glb')
+useGLTF.preload('/models/booths/bm106.glb')
+useGLTF.preload('/models/booths/bm107.glb')
+useGLTF.preload('/models/booths/bm108.glb')
+useGLTF.preload('/models/booths/bm109.glb')
+useGLTF.preload('/models/booths/bm110.glb')
 useGLTF.preload('/models/accessories/bm-counter.glb')
+useGLTF.preload('/models/accessories/bm-counter-storage.glb')
+useGLTF.preload('/models/accessories/bm-counter-slim.glb')
+useGLTF.preload('/models/accessories/shelf.glb')
+useGLTF.preload('/models/accessories/55in-TV.glb')
 flooringTexturePreloadPaths.forEach((path) => useTexture.preload(path))

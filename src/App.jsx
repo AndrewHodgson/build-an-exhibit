@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  addOns,
+  ACCESSORY_ROTATION_STEP,
+  createDefaultAddOnInstances,
+  createDefaultAddOnSettings,
+  createManualAddOnInstance,
+  getActiveAccessories,
+  getAddOnById,
+  INCHES_TO_METERS,
+} from '../data/addOns.js'
 import { boothSizes, getBoothsBySize, getDefaultBooth } from '../data/booths.js'
 import { defaultFlooringId, getFlooringById } from '../data/flooring.js'
 import {
-  emptyGraphicUploads,
-  getGraphicZoneById,
-  graphicZones,
+  createEmptyGraphicState,
+  getGraphicZonesForBooth,
 } from '../data/graphicZones.js'
 import CanvasScene from './components/CanvasScene.jsx'
 import CounterPlacementControls from './components/CounterPlacementControls.jsx'
@@ -14,8 +23,7 @@ import WelcomeModal from './components/WelcomeModal.jsx'
 import { createBoothSummaryPdf } from './utils/exportPdf.js'
 
 const ASPECT_RATIO_TOLERANCE = 0.01
-const COUNTER_MOVE_STEP = 0.1
-const COUNTER_ROTATION_STEP = Math.PI / 12
+const ACCESSORY_MOVE_STEP = 0.5 * INCHES_TO_METERS
 
 function isSupportedGraphicFile(file) {
   return (
@@ -74,9 +82,9 @@ function createGraphicUpload(zone, fileName, textureUrl, width, height, warning,
   }
 }
 
-function createDefaultAccessoryPlacements(booth) {
+function createDefaultAccessoryPlacements(accessories) {
   return Object.fromEntries(
-    (booth.includedAccessories ?? []).map((accessory) => [
+    accessories.map((accessory) => [
       accessory.id,
       {
         position: [...accessory.position],
@@ -86,18 +94,34 @@ function createDefaultAccessoryPlacements(booth) {
   )
 }
 
+function formatPositionCoordinate(value) {
+  const rounded = Math.round((value ?? 0) * 100) / 100
+  return (Object.is(rounded, -0) ? 0 : rounded).toFixed(2)
+}
+
 export default function App() {
   const defaultBooth = getDefaultBooth()
+  const initialAddOnInstances = createDefaultAddOnInstances(defaultBooth)
+  const initialAccessories = getActiveAccessories(defaultBooth, initialAddOnInstances)
   const sceneRef = useRef(null)
+  const nextAddOnInstanceId = useRef(1)
   const [selectedSize, setSelectedSize] = useState(defaultBooth.size)
   const [selectedBoothId, setSelectedBoothId] = useState(defaultBooth.id)
   const [selectedFlooringId, setSelectedFlooringId] = useState(defaultFlooringId)
+  const [addOnInstances, setAddOnInstances] = useState(initialAddOnInstances)
+  const [addOnSettings, setAddOnSettings] = useState(() =>
+    createDefaultAddOnSettings(initialAddOnInstances),
+  )
   const [accessoryPlacements, setAccessoryPlacements] = useState(() =>
-    createDefaultAccessoryPlacements(defaultBooth),
+    createDefaultAccessoryPlacements(initialAccessories),
   )
   const [selectedAccessoryId, setSelectedAccessoryId] = useState(null)
-  const [graphicUploads, setGraphicUploads] = useState(emptyGraphicUploads)
-  const [graphicErrors, setGraphicErrors] = useState(emptyGraphicUploads)
+  const [graphicUploads, setGraphicUploads] = useState(() =>
+    createEmptyGraphicState(getGraphicZonesForBooth(defaultBooth, initialAccessories)),
+  )
+  const [graphicErrors, setGraphicErrors] = useState(() =>
+    createEmptyGraphicState(getGraphicZonesForBooth(defaultBooth, initialAccessories)),
+  )
   const [cropRequest, setCropRequest] = useState(null)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
@@ -113,7 +137,20 @@ export default function App() {
     availableBooths.find((booth) => booth.id === selectedBoothId) ??
     availableBooths[0] ??
     defaultBooth
-  const activeCounter = selectedBooth.includedAccessories?.[0]
+  const activeAccessories = useMemo(
+    () => getActiveAccessories(selectedBooth, addOnInstances),
+    [addOnInstances, selectedBooth],
+  )
+  const graphicZones = useMemo(
+    () => getGraphicZonesForBooth(selectedBooth, activeAccessories),
+    [activeAccessories, selectedBooth],
+  )
+  const selectedAccessory = activeAccessories.find(
+    (accessory) => accessory.id === selectedAccessoryId,
+  )
+  const selectedAccessoryPlacement = selectedAccessory
+    ? accessoryPlacements[selectedAccessory.id] ?? selectedAccessory
+    : null
 
   function revokeGraphicUrl(upload) {
     if (upload?.textureUrl) {
@@ -121,40 +158,55 @@ export default function App() {
     }
   }
 
-  function clearGraphicUploads() {
+  function clearGraphicUploads(nextBooth = selectedBooth, nextAccessories = activeAccessories) {
+    const emptyGraphicState = createEmptyGraphicState(
+      getGraphicZonesForBooth(nextBooth, nextAccessories),
+    )
+
     setGraphicUploads((currentUploads) => {
       Object.values(currentUploads).forEach(revokeGraphicUrl)
-      return { ...emptyGraphicUploads }
+      return emptyGraphicState
     })
-    setGraphicErrors({ ...emptyGraphicUploads })
+    setGraphicErrors({ ...emptyGraphicState })
     setCropRequest(null)
   }
 
-  function resetAccessoryPlacements(booth) {
+  function resetBoothAccessories(booth) {
     if (!booth) {
-      return
+      return []
     }
 
-    setAccessoryPlacements(createDefaultAccessoryPlacements(booth))
+    const nextAddOnInstances = createDefaultAddOnInstances(booth)
+    const nextAccessories = getActiveAccessories(booth, nextAddOnInstances)
+
+    setAddOnInstances(nextAddOnInstances)
+    setAddOnSettings(createDefaultAddOnSettings(nextAddOnInstances))
+    setAccessoryPlacements(createDefaultAccessoryPlacements(nextAccessories))
+
+    return nextAccessories
   }
 
   function selectSize(size) {
-    const nextBooth = getDefaultBooth(size)
-
-    if (size !== selectedSize) {
-      clearGraphicUploads()
+    if (size === selectedSize) {
+      return
     }
 
-    resetAccessoryPlacements(nextBooth)
+    const nextBooth = getDefaultBooth(size)
+    const nextAccessories = resetBoothAccessories(nextBooth)
+
+    clearGraphicUploads(nextBooth, nextAccessories)
+
     setSelectedAccessoryId(null)
     setSelectedSize(size)
     setSelectedBoothId(nextBooth.id)
   }
 
   function selectBooth(boothId) {
+    const nextBooth = availableBooths.find((booth) => booth.id === boothId)
+
     if (boothId !== selectedBoothId) {
-      clearGraphicUploads()
-      resetAccessoryPlacements(availableBooths.find((booth) => booth.id === boothId))
+      const nextAccessories = resetBoothAccessories(nextBooth)
+      clearGraphicUploads(nextBooth, nextAccessories)
       setSelectedAccessoryId(null)
     }
 
@@ -166,8 +218,8 @@ export default function App() {
       getBoothsBySize(size).find((booth) => booth.id === boothId) ?? getDefaultBooth(size)
 
     if (size !== selectedSize || boothId !== selectedBoothId) {
-      clearGraphicUploads()
-      resetAccessoryPlacements(nextBooth)
+      const nextAccessories = resetBoothAccessories(nextBooth)
+      clearGraphicUploads(nextBooth, nextAccessories)
       setSelectedAccessoryId(null)
     }
 
@@ -200,7 +252,7 @@ export default function App() {
       return
     }
 
-    const zone = getGraphicZoneById(zoneId)
+    const zone = graphicZones.find((graphicZone) => graphicZone.id === zoneId)
 
     if (!zone) {
       return
@@ -284,7 +336,7 @@ export default function App() {
   }
 
   function clearGraphicUpload(zoneId) {
-    const zone = getGraphicZoneById(zoneId)
+    const zone = graphicZones.find((graphicZone) => graphicZone.id === zoneId)
 
     if (!zone) {
       return
@@ -301,34 +353,121 @@ export default function App() {
     setGraphicError(zone.id, '')
   }
 
-  function updateCounterPlacement(updater) {
-    if (!activeCounter) {
+  function addAddOn(addOnId) {
+    const addOn = getAddOnById(addOnId)
+
+    if (!addOn) {
       return
     }
 
+    const instanceId = `manual-${addOnId}-${nextAddOnInstanceId.current}`
+    nextAddOnInstanceId.current += 1
+    const instance = createManualAddOnInstance(addOnId, instanceId)
+    const nextInstances = [...addOnInstances, instance]
+    const accessory = getActiveAccessories(selectedBooth, nextInstances).find(
+      (item) => item.id === instanceId,
+    )
+
+    setAddOnInstances(nextInstances)
+    setAddOnSettings((currentSettings) => ({
+      ...currentSettings,
+      [instanceId]: instance.settings,
+    }))
+    setAccessoryPlacements((currentPlacements) => ({
+      ...currentPlacements,
+      [instanceId]: {
+        position: [...instance.position],
+        rotation: [...instance.rotation],
+      },
+    }))
+    setGraphicUploads((currentUploads) => ({
+      ...currentUploads,
+      ...createEmptyGraphicState(accessory?.graphicZones ?? []),
+    }))
+    setGraphicErrors((currentErrors) => ({
+      ...currentErrors,
+      ...createEmptyGraphicState(accessory?.graphicZones ?? []),
+    }))
+    setSelectedAccessoryId(instanceId)
+  }
+
+  function removeAddOn(instanceId) {
+    const accessory = activeAccessories.find((item) => item.id === instanceId)
+
+    setAddOnInstances((currentInstances) =>
+      currentInstances.filter((instance) => instance.id !== instanceId),
+    )
+    setAddOnSettings((currentSettings) => {
+      const nextSettings = { ...currentSettings }
+      delete nextSettings[instanceId]
+      return nextSettings
+    })
     setAccessoryPlacements((currentPlacements) => {
-      const currentPlacement = currentPlacements[activeCounter.id] ?? {
-        position: [...activeCounter.position],
-        rotation: [...activeCounter.rotation],
+      const nextPlacements = { ...currentPlacements }
+      delete nextPlacements[instanceId]
+      return nextPlacements
+    })
+    setGraphicUploads((currentUploads) => {
+      const nextUploads = { ...currentUploads }
+      ;(accessory?.graphicZones ?? []).forEach((zone) => {
+        revokeGraphicUrl(nextUploads[zone.id])
+        delete nextUploads[zone.id]
+      })
+      return nextUploads
+    })
+    setGraphicErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      ;(accessory?.graphicZones ?? []).forEach((zone) => delete nextErrors[zone.id])
+      return nextErrors
+    })
+
+    if (selectedAccessoryId === instanceId) {
+      setSelectedAccessoryId(null)
+    }
+  }
+
+  function updateAddOnSetting(instanceId, setting, value) {
+    setAddOnSettings((currentSettings) => ({
+      ...currentSettings,
+      [instanceId]: {
+        ...currentSettings[instanceId],
+        [setting]: value,
+      },
+    }))
+  }
+
+  function updateAccessoryPlacement(accessoryId, updater) {
+    setAccessoryPlacements((currentPlacements) => {
+      const accessory = activeAccessories.find((item) => item.id === accessoryId)
+      const currentPlacement = currentPlacements[accessoryId] ?? accessory
+
+      if (!currentPlacement) {
+        return currentPlacements
       }
 
       return {
         ...currentPlacements,
-        [activeCounter.id]: updater(currentPlacement),
+        [accessoryId]: updater(currentPlacement),
       }
     })
   }
 
-  function moveCounter(direction) {
+  function updateSelectedAccessoryPlacement(updater) {
+    if (selectedAccessory) {
+      updateAccessoryPlacement(selectedAccessory.id, updater)
+    }
+  }
+
+  function moveAccessory(direction) {
     const deltas = {
-      left: [-COUNTER_MOVE_STEP, 0],
-      right: [COUNTER_MOVE_STEP, 0],
-      forward: [0, COUNTER_MOVE_STEP],
-      back: [0, -COUNTER_MOVE_STEP],
+      left: [-ACCESSORY_MOVE_STEP, 0],
+      right: [ACCESSORY_MOVE_STEP, 0],
+      forward: [0, ACCESSORY_MOVE_STEP],
+      back: [0, -ACCESSORY_MOVE_STEP],
     }
     const [deltaX, deltaZ] = deltas[direction] ?? [0, 0]
 
-    updateCounterPlacement((currentPlacement) => ({
+    updateSelectedAccessoryPlacement((currentPlacement) => ({
       ...currentPlacement,
       position: [
         currentPlacement.position[0] + deltaX,
@@ -338,11 +477,18 @@ export default function App() {
     }))
   }
 
-  function rotateCounter(direction) {
-    const deltaY =
-      direction === 'clockwise' ? -COUNTER_ROTATION_STEP : COUNTER_ROTATION_STEP
+  function transformAccessoryPosition(accessoryId, position) {
+    updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
+      ...currentPlacement,
+      position: [...position],
+    }))
+  }
 
-    updateCounterPlacement((currentPlacement) => ({
+  function rotateAccessoryById(accessoryId, direction) {
+    const deltaY =
+      direction === 'clockwise' ? -ACCESSORY_ROTATION_STEP : ACCESSORY_ROTATION_STEP
+
+    updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
       ...currentPlacement,
       rotation: [
         currentPlacement.rotation[0],
@@ -352,16 +498,29 @@ export default function App() {
     }))
   }
 
-  function resetCounterPlacement() {
-    if (!activeCounter) {
+  function setAccessoryRotation(accessoryId, rotation) {
+    updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
+      ...currentPlacement,
+      rotation,
+    }))
+  }
+
+  function rotateAccessory(direction) {
+    if (selectedAccessory) {
+      rotateAccessoryById(selectedAccessory.id, direction)
+    }
+  }
+
+  function resetAccessoryPlacement() {
+    if (!selectedAccessory) {
       return
     }
 
     setAccessoryPlacements((currentPlacements) => ({
       ...currentPlacements,
-      [activeCounter.id]: {
-        position: [...activeCounter.position],
-        rotation: [...activeCounter.rotation],
+      [selectedAccessory.id]: {
+        position: [...selectedAccessory.position],
+        rotation: [...selectedAccessory.rotation],
       },
     }))
   }
@@ -418,9 +577,13 @@ export default function App() {
           booth={selectedBooth}
           flooring={selectedFlooring}
           graphicUploads={graphicUploads}
+          accessories={activeAccessories}
           accessoryPlacements={accessoryPlacements}
+          addOnSettings={addOnSettings}
           selectedAccessoryId={selectedAccessoryId}
           onAccessorySelect={setSelectedAccessoryId}
+          onAccessoryPositionChange={transformAccessoryPosition}
+          onAccessoryRotationChange={setAccessoryRotation}
           onSceneDeselect={() => setSelectedAccessoryId(null)}
           hideSelectionOutline={isExportingPdf}
           hideGrid={isExportingPdf}
@@ -432,15 +595,22 @@ export default function App() {
         <p>Scroll wheel: zoom in / out</p>
       </div>
 
-      {activeCounter &&
-        selectedAccessoryId === activeCounter.id &&
+      {selectedAccessoryPlacement && (
+        <output className="selected-position-indicator" aria-label="Selected position">
+          <span>X: {formatPositionCoordinate(selectedAccessoryPlacement.position[0])}</span>
+          <span>Y: {formatPositionCoordinate(selectedAccessoryPlacement.position[2])}</span>
+          <span>Z: {formatPositionCoordinate(selectedAccessoryPlacement.position[1])}</span>
+        </output>
+      )}
+
+      {selectedAccessory &&
         !isWelcomeOpen &&
         !isExportingPdf && (
           <CounterPlacementControls
-            accessoryName={activeCounter.name}
-            onMove={moveCounter}
-            onRotate={rotateCounter}
-            onReset={resetCounterPlacement}
+            accessoryName={selectedAccessory.name}
+            onMove={moveAccessory}
+            onRotate={rotateAccessory}
+            onReset={resetAccessoryPlacement}
           />
         )}
 
@@ -449,12 +619,20 @@ export default function App() {
         booths={availableBooths}
         selectedSize={selectedSize}
         selectedBooth={selectedBooth}
+        accessories={activeAccessories}
+        addOns={addOns}
+        selectedAccessoryId={selectedAccessoryId}
+        addOnSettings={addOnSettings}
         selectedFlooringId={selectedFlooring.id}
         graphicZones={graphicZones}
         graphicUploads={graphicUploads}
         graphicErrors={graphicErrors}
         onSizeChange={selectSize}
         onBoothChange={selectBooth}
+        onAddOnAdd={addAddOn}
+        onAddOnRemove={removeAddOn}
+        onAddOnSelect={setSelectedAccessoryId}
+        onAddOnSettingChange={updateAddOnSetting}
         onFlooringChange={setSelectedFlooringId}
         onGraphicFileChange={handleGraphicFile}
         onGraphicClear={clearGraphicUpload}

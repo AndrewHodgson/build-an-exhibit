@@ -1,6 +1,6 @@
-const MAX_GRAPHIC_UPLOAD_BYTES = 4 * 1024 * 1024
+export const MAX_GRAPHIC_UPLOAD_BYTES = 4 * 1024 * 1024
 
-export const graphicZones = [
+export const defaultBoothGraphicZones = [
   {
     id: 'backwall',
     label: 'Back Wall Graphic',
@@ -9,20 +9,24 @@ export const graphicZones = [
     recommendedHeight: 1625,
     maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
   },
-  {
-    id: 'counter',
-    label: 'Counter Graphic',
-    materialName: 'MAT_graphic_counter',
-    recommendedWidth: 1000,
-    recommendedHeight: 1000,
-    maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
-  },
 ]
 
-export const emptyGraphicUploads = Object.fromEntries(
-  graphicZones.map((zone) => [zone.id, null]),
-)
+export const counterGraphicZone = {
+  id: 'counter',
+  label: 'Counter Graphic',
+  materialName: 'MAT_graphic_counter',
+  recommendedWidth: 1000,
+  recommendedHeight: 1000,
+  maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+}
 
-export function getGraphicZoneById(zoneId) {
-  return graphicZones.find((zone) => zone.id === zoneId)
+export function getGraphicZonesForBooth(booth, accessories = booth?.includedAccessories ?? []) {
+  return [
+    ...(booth?.graphicZones ?? defaultBoothGraphicZones),
+    ...accessories.flatMap((accessory) => accessory.graphicZones ?? []),
+  ]
+}
+
+export function createEmptyGraphicState(zones) {
+  return Object.fromEntries(zones.map((zone) => [zone.id, null]))
 }

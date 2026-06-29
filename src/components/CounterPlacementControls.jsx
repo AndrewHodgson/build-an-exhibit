@@ -22,6 +22,9 @@ export default function CounterPlacementControls({ accessoryName, onMove, onRota
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
+      <p className="floor-drag-hint">
+        Drag arrows to move one axis. Drag the ring to rotate.
+      </p>
       <img
         src="/controller.svg"
         alt=""
@@ -31,37 +34,37 @@ export default function CounterPlacementControls({ accessoryName, onMove, onRota
 
       <ControllerButton
         className="controller-hit-rotate-left"
-        label="Rotate counter counterclockwise"
+        label={`Rotate ${accessoryName} counterclockwise`}
         onClick={() => onRotate('counterclockwise')}
       />
       <ControllerButton
         className="controller-hit-rotate-right"
-        label="Rotate counter clockwise"
+        label={`Rotate ${accessoryName} clockwise`}
         onClick={() => onRotate('clockwise')}
       />
       <ControllerButton
         className="controller-hit-up"
-        label="Move counter forward"
+        label={`Move ${accessoryName} forward`}
         onClick={() => onMove('back')}
       />
       <ControllerButton
         className="controller-hit-left"
-        label="Move counter left"
+        label={`Move ${accessoryName} left`}
         onClick={() => onMove('left')}
       />
       <ControllerButton
         className="controller-hit-right"
-        label="Move counter right"
+        label={`Move ${accessoryName} right`}
         onClick={() => onMove('right')}
       />
       <ControllerButton
         className="controller-hit-down"
-        label="Move counter back"
+        label={`Move ${accessoryName} back`}
         onClick={() => onMove('forward')}
       />
       <ControllerButton
         className="controller-hit-reset"
-        label="Reset counter placement"
+        label={`Reset ${accessoryName} placement`}
         onClick={onReset}
       />
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { addOnCategories } from '../../data/addOns.js'
 import {
   premiumFlooringOptions,
   standardFlooringOptions,
@@ -68,6 +69,15 @@ function LayoutCards({ booths, selectedBooth, onBoothChange }) {
   )
 }
 
+function PanelSubsection({ title, children }) {
+  return (
+    <div className="panel-subsection">
+      <h2>{title}</h2>
+      {children}
+    </div>
+  )
+}
+
 function PlaceholderButton({ children }) {
   return (
     <button type="button" className="placeholder-button" disabled>
@@ -76,11 +86,116 @@ function PlaceholderButton({ children }) {
   )
 }
 
-function PanelSubsection({ title, children }) {
+function AddOnCards({
+  addOns,
+  accessories,
+  selectedAccessoryId,
+  onAdd,
+  onRemove,
+}) {
+  return addOnCategories.map((category) => {
+    const categoryAddOns = addOns.filter((addOn) => addOn.category === category)
+
+    return (
+      <PanelSubsection key={category} title={category}>
+        {categoryAddOns.length ? (
+          <div className="layout-card-list">
+            {categoryAddOns.map((addOn) => {
+              const instances = accessories.filter(
+                (accessory) => accessory.addOnId === addOn.id,
+              )
+              const isSelected = instances.some(
+                (accessory) => accessory.id === selectedAccessoryId,
+              )
+              const removeTarget =
+                instances.find((accessory) => accessory.id === selectedAccessoryId) ??
+                instances.at(-1)
+
+              return (
+                <div
+                  key={addOn.id}
+                  className={`layout-card add-on-card ${isSelected ? 'is-selected' : ''}`}
+                >
+                  <div className="add-on-card-main">
+                    <span className="layout-thumb" aria-hidden="true">
+                      <img src={addOn.thumbnailPath} alt="" />
+                    </span>
+                    <span className="layout-copy">
+                      <span className="layout-code">{addOn.name}</span>
+                    </span>
+                  </div>
+                  <div className="add-on-actions">
+                    <button
+                      type="button"
+                      className="add-on-action"
+                      aria-label={`Add ${addOn.name}`}
+                      onClick={() => onAdd(addOn.id)}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="add-on-action"
+                      aria-label={`Remove ${addOn.name}`}
+                      disabled={!removeTarget}
+                      onClick={() => removeTarget && onRemove(removeTarget.id)}
+                    >
+                      -
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="panel-note">No add-ons available yet.</p>
+        )}
+      </PanelSubsection>
+    )
+  })
+}
+
+function AddOnOptions({ addOn, accessory, settings, onSettingChange }) {
+  if (!addOn || !accessory) {
+    return null
+  }
+
   return (
-    <div className="panel-subsection">
-      <h2>{title}</h2>
-      {children}
+    <div className="add-on-options">
+      <p className="field-label">Selected: {accessory.name}</p>
+      {Number.isInteger(addOn.defaultQuantity) && (
+        <label className="add-on-option-control">
+          <span>Shelf quantity: {settings.quantity ?? addOn.defaultQuantity}</span>
+          <input
+            type="range"
+            min={addOn.minQuantity}
+            max={addOn.maxQuantity}
+            step="1"
+            value={settings.quantity ?? addOn.defaultQuantity}
+            onChange={(event) =>
+              onSettingChange(accessory.id, 'quantity', Number(event.target.value))
+            }
+          />
+        </label>
+      )}
+      {addOn.defaultSize && (
+        <label className="add-on-option-control">
+          <span>TV size</span>
+          <select
+            value={settings.size ?? addOn.defaultSize}
+            onChange={(event) =>
+              onSettingChange(accessory.id, 'size', Number(event.target.value))
+            }
+          >
+            {addOn.sizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}in
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <p className="panel-note">Select the add-on in the preview to move or rotate it.</p>
     </div>
   )
 }
@@ -176,12 +291,20 @@ export default function RightPanel({
   booths,
   selectedSize,
   selectedBooth,
+  accessories,
+  addOns,
+  selectedAccessoryId,
+  addOnSettings,
   selectedFlooringId,
   graphicZones,
   graphicUploads,
   graphicErrors,
   onSizeChange,
   onBoothChange,
+  onAddOnAdd,
+  onAddOnRemove,
+  onAddOnSelect,
+  onAddOnSettingChange,
   onFlooringChange,
   onGraphicFileChange,
   onGraphicClear,
@@ -191,7 +314,24 @@ export default function RightPanel({
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   const [openSectionId, setOpenSectionId] = useState('booth-selection')
+  const selectedAccessory = accessories.find(
+    (accessory) => accessory.id === selectedAccessoryId,
+  )
+  const selectedAddOn = addOns.find(
+    (addOn) => addOn.id === selectedAccessory?.addOnId,
+  )
+  const visibleOpenSectionId = selectedAddOn ? 'add-ons' : openSectionId
+  const addAddOn = (addOnId) => {
+    setOpenSectionId('add-ons')
+    onAddOnAdd(addOnId)
+  }
   const toggleSection = (sectionId) => {
+    if (selectedAddOn) {
+      onAddOnSelect(null)
+      setOpenSectionId(sectionId === 'add-ons' ? null : sectionId)
+      return
+    }
+
     setOpenSectionId((currentSectionId) =>
       currentSectionId === sectionId ? null : sectionId,
     )
@@ -238,7 +378,7 @@ export default function RightPanel({
           <Section
             id="booth-selection"
             title="Booth Selection"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <SegmentedControl
@@ -257,7 +397,7 @@ export default function RightPanel({
           <Section
             id="booth-details"
             title="Booth Details"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <dl className="details-list">
@@ -279,7 +419,7 @@ export default function RightPanel({
               <p className="field-label">Included with this booth</p>
               <ul className="included-list">
                 <li>BeMatrix wall structure</li>
-                {selectedBooth.includedAccessories?.map((accessory) => (
+                {accessories.map((accessory) => (
                   <li key={accessory.id}>{accessory.name}</li>
                 ))}
               </ul>
@@ -289,7 +429,7 @@ export default function RightPanel({
           <Section
             id="graphics"
             title="Graphics"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <p className="panel-note">
@@ -309,21 +449,30 @@ export default function RightPanel({
           </Section>
 
           <Section
-            id="furniture"
-            title="Furniture"
-            openSectionId={openSectionId}
+            id="add-ons"
+            title="Add-Ons"
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
-            <p className="panel-note">
-              Furniture placement, rotation, and delete controls will be added in a later phase.
-            </p>
-            <PlaceholderButton>Add furniture</PlaceholderButton>
+            <AddOnOptions
+              addOn={selectedAddOn}
+              accessory={selectedAccessory}
+              settings={addOnSettings[selectedAccessory?.id] ?? {}}
+              onSettingChange={onAddOnSettingChange}
+            />
+            <AddOnCards
+              addOns={addOns}
+              accessories={accessories}
+              selectedAccessoryId={selectedAccessoryId}
+              onAdd={addAddOn}
+              onRemove={onAddOnRemove}
+            />
           </Section>
 
           <Section
             id="carpet-flooring"
             title="Carpet & Flooring"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <PanelSubsection title="Standard Carpet">
@@ -350,7 +499,7 @@ export default function RightPanel({
           <Section
             id="export"
             title="Export"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <p className="panel-note">
@@ -371,7 +520,7 @@ export default function RightPanel({
           <Section
             id="contact-sourceone"
             title="Contact SourceOne"
-            openSectionId={openSectionId}
+            openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
             <p className="panel-note">
