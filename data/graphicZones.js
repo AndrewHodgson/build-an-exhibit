@@ -8,6 +8,7 @@ export const defaultBoothGraphicZones = [
     recommendedWidth: 2000,
     recommendedHeight: 1625,
     maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+    defaultTexturePath: '/textures/10x10_booths/bm101-backwall.jpg',
   },
 ]
 
@@ -18,6 +19,7 @@ export const counterGraphicZone = {
   recommendedWidth: 1000,
   recommendedHeight: 1000,
   maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+  defaultTexturePath: '/textures/accessories/bm-counter-texture.jpg',
 }
 
 export function getGraphicZonesForBooth(booth, accessories = booth?.includedAccessories ?? []) {

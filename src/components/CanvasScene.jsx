@@ -767,6 +767,8 @@ const CanvasScene = forwardRef(function CanvasScene({
   onAccessorySelect,
   onAccessoryPositionChange,
   onAccessoryRotationChange,
+  onAccessoryTransformStart,
+  onAccessoryTransformEnd,
   onSceneDeselect,
   hideSelectionOutline = false,
   hideGrid = false,
@@ -797,13 +799,15 @@ const CanvasScene = forwardRef(function CanvasScene({
       orbitControlsRef.current.enabled = false
     }
     setIsDraggingAccessory(true)
-  }, [])
+    onAccessoryTransformStart?.()
+  }, [onAccessoryTransformStart])
   const handleAccessoryDragEnd = useCallback(() => {
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = true
     }
     setIsDraggingAccessory(false)
-  }, [])
+    onAccessoryTransformEnd?.()
+  }, [onAccessoryTransformEnd])
   const boothGraphicTextureUrls = useMemo(
     () =>
       Object.fromEntries(
@@ -937,6 +941,8 @@ useGLTF.preload('/models/booths/bm110.glb')
 useGLTF.preload('/models/accessories/bm-counter.glb')
 useGLTF.preload('/models/accessories/bm-counter-storage.glb')
 useGLTF.preload('/models/accessories/bm-counter-slim.glb')
+useGLTF.preload('/models/accessories/BM_OctanormCounter.glb')
+useGLTF.preload('/models/accessories/BM_OctanormTable.glb')
 useGLTF.preload('/models/accessories/shelf.glb')
 useGLTF.preload('/models/accessories/55in-TV.glb')
 flooringTexturePreloadPaths.forEach((path) => useTexture.preload(path))

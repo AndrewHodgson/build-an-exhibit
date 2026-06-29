@@ -169,7 +169,7 @@ const BOOTH_OVERRIDES = {
       {
         addOnId: 'shelf',
         position: [-0.97, 0.08, -0.33],
-        settings: { quantity: 4 },
+        settings: { quantity: 3 },
       },
     ],
     graphicZones: [
@@ -186,7 +186,12 @@ const BOOTH_OVERRIDES = {
   },
   BM109: {
     modelPath: '/models/booths/bm109.glb',
-    defaultAddOns: [{ addOnId: 'tv-55', position: [0.75, 0.07, -0.07] }],
+    includedAccessories: [],
+    defaultAddOns: [
+      { addOnId: 'octanorm-counter' },
+      { addOnId: 'octanorm-table' },
+      { addOnId: 'tv-55', position: [0.75, 0.07, -0.07] },
+    ],
     graphicZones: [
       {
         id: 'backwall',
@@ -207,7 +212,7 @@ const BOOTH_OVERRIDES = {
         addOnId: 'shelf',
         position: [-1.27, 0, 0],
         rotation: [0, Math.PI / 2, 0],
-        settings: { quantity: 4 },
+        settings: { quantity: 3 },
       },
       {
         addOnId: 'tv-55',
@@ -231,7 +236,7 @@ const BOOTH_OVERRIDES = {
         recommendedWidth: 2000,
         recommendedHeight: 1632,
         maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
-        defaultTexturePath: '/textures/10x10_booths/bm109-return.jpg',
+        defaultTexturePath: '/textures/10x10_booths/bm110-return.jpg',
       },
     ],
   },

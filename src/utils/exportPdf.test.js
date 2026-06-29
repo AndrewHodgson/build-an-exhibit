@@ -1,0 +1,92 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import {
+  createDefaultAddOnInstances,
+  createDefaultAddOnSettings,
+  createManualAddOnInstance,
+  getActiveAccessories,
+} from '../../data/addOns.js'
+import { getBoothsBySize } from '../../data/booths.js'
+import { createAccessorySummaryItems } from './exportPdf.js'
+
+function getBooth(code) {
+  return [...getBoothsBySize('10x10'), ...getBoothsBySize('10x20')].find(
+    (booth) => booth.code === code,
+  )
+}
+
+test('summarizes booth defaults with shelf quantity and TV size', () => {
+  const booth = getBooth('BM108')
+  const instances = createDefaultAddOnInstances(booth)
+  const settings = createDefaultAddOnSettings(instances)
+  const accessories = getActiveAccessories(booth, instances)
+
+  assert.deepEqual(createAccessorySummaryItems(accessories, settings), [
+    'Reception counter - 1 - No graphic uploaded',
+    'Shelf - Quantity: 3',
+  ])
+
+  const tvBooth = getBooth('BM109')
+  const tvInstances = createDefaultAddOnInstances(tvBooth)
+  const tvSettings = createDefaultAddOnSettings(tvInstances)
+  const tvAccessories = getActiveAccessories(tvBooth, tvInstances)
+
+  assert.ok(
+    createAccessorySummaryItems(tvAccessories, tvSettings).includes(
+      '55in TV - Size: 55in - No graphic uploaded',
+    ),
+  )
+})
+
+test('summarizes manual counters, shelves, multiple TVs, and graphics', () => {
+  const booth = { includedAccessories: [] }
+  const instances = [
+    createManualAddOnInstance('standard-counter', 'standard-1'),
+    createManualAddOnInstance('storage-counter', 'storage-1'),
+    createManualAddOnInstance('slim-counter', 'slim-1'),
+    createManualAddOnInstance('shelf', 'shelf-1'),
+    createManualAddOnInstance('tv-55', 'tv-1'),
+    createManualAddOnInstance('tv-55', 'tv-2'),
+  ]
+  const settings = createDefaultAddOnSettings(instances)
+  settings['shelf-1'] = { quantity: 4 }
+  settings['tv-2'] = { size: 65 }
+  const accessories = getActiveAccessories(booth, instances)
+  const storageGraphicZone = accessories
+    .find((accessory) => accessory.id === 'storage-1')
+    .graphicZones[0].id
+  const firstTvGraphicZone = accessories
+    .find((accessory) => accessory.id === 'tv-1')
+    .graphicZones[0].id
+  const uploads = {
+    [storageGraphicZone]: { fileName: 'storage-art.png' },
+    [firstTvGraphicZone]: { fileName: 'tv-art.png' },
+  }
+
+  assert.deepEqual(createAccessorySummaryItems(accessories, settings, uploads), [
+    'Standard Counter - 1 - No graphic uploaded',
+    'Storage Counter - 1 - Graphic uploaded',
+    'Slim Counter - 1 - No graphic uploaded',
+    'Shelf - Quantity: 4',
+    '55in TV #1 - Size: 55in - Graphic uploaded',
+    '55in TV #2 - Size: 65in - No graphic uploaded',
+  ])
+})
+
+test('supports empty booths and future furniture metadata', () => {
+  assert.deepEqual(createAccessorySummaryItems(), [])
+
+  const furniture = {
+    id: 'chair-1',
+    name: 'Lounge Chair',
+    catalogId: 'lounge-chair',
+    summaryFields: [
+      { setting: 'quantity', defaultProperty: 'defaultQuantity', label: 'Quantity' },
+    ],
+    defaultQuantity: 2,
+  }
+
+  assert.deepEqual(createAccessorySummaryItems([furniture]), [
+    'Lounge Chair - Quantity: 2',
+  ])
+})

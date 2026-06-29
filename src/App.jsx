@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useProgress } from '@react-three/drei'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addOns,
   ACCESSORY_ROTATION_STEP,
@@ -24,6 +25,31 @@ import { createBoothSummaryPdf } from './utils/exportPdf.js'
 
 const ASPECT_RATIO_TOLERANCE = 0.01
 const ACCESSORY_MOVE_STEP = 0.5 * INCHES_TO_METERS
+const HISTORY_LIMIT = 10
+
+function LoadingOverlay() {
+  const { active, progress } = useProgress()
+  const isVisible = active || progress < 100
+  const roundedProgress = Math.round(progress)
+
+  if (!isVisible) {
+    return null
+  }
+
+  return (
+    <div className="loading-overlay" aria-live="polite" aria-label={`Loading ${roundedProgress}%`}>
+      <div className="loading-progress">
+        <div className="loading-progress-track">
+          <div
+            className="loading-progress-value"
+            style={{ width: `${roundedProgress}%` }}
+          />
+        </div>
+        <p>Loading {roundedProgress}%</p>
+      </div>
+    </div>
+  )
+}
 
 function isSupportedGraphicFile(file) {
   return (
@@ -109,6 +135,7 @@ export default function App() {
   const [selectedBoothId, setSelectedBoothId] = useState(defaultBooth.id)
   const [selectedFlooringId, setSelectedFlooringId] = useState(defaultFlooringId)
   const [addOnInstances, setAddOnInstances] = useState(initialAddOnInstances)
+  const [hiddenAccessoryIds, setHiddenAccessoryIds] = useState([])
   const [addOnSettings, setAddOnSettings] = useState(() =>
     createDefaultAddOnSettings(initialAddOnInstances),
   )
@@ -126,7 +153,10 @@ export default function App() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [exportStatus, setExportStatus] = useState('')
-  const graphicUploadsRef = useRef(graphicUploads)
+  const ownedGraphicUrlsRef = useRef(new Set())
+  const historyRef = useRef([])
+  const isTransformingAccessoryRef = useRef(false)
+  const removeAddOnRef = useRef(null)
 
   const availableBooths = useMemo(() => getBoothsBySize(selectedSize), [selectedSize])
   const selectedFlooring = useMemo(
@@ -138,8 +168,11 @@ export default function App() {
     availableBooths[0] ??
     defaultBooth
   const activeAccessories = useMemo(
-    () => getActiveAccessories(selectedBooth, addOnInstances),
-    [addOnInstances, selectedBooth],
+    () =>
+      getActiveAccessories(selectedBooth, addOnInstances).filter(
+        (accessory) => !hiddenAccessoryIds.includes(accessory.id),
+      ),
+    [addOnInstances, hiddenAccessoryIds, selectedBooth],
   )
   const graphicZones = useMemo(
     () => getGraphicZonesForBooth(selectedBooth, activeAccessories),
@@ -152,6 +185,58 @@ export default function App() {
     ? accessoryPlacements[selectedAccessory.id] ?? selectedAccessory
     : null
 
+  const createHistorySnapshot = useCallback(
+    () => ({
+      selectedSize,
+      selectedBoothId,
+      selectedFlooringId,
+      addOnInstances,
+      hiddenAccessoryIds,
+      addOnSettings,
+      accessoryPlacements,
+      graphicUploads,
+      graphicErrors,
+    }),
+    [
+      accessoryPlacements,
+      addOnInstances,
+      addOnSettings,
+      graphicErrors,
+      graphicUploads,
+      hiddenAccessoryIds,
+      selectedBoothId,
+      selectedFlooringId,
+      selectedSize,
+    ],
+  )
+
+  const recordHistory = useCallback(() => {
+    historyRef.current = [...historyRef.current, createHistorySnapshot()].slice(
+      -HISTORY_LIMIT,
+    )
+  }, [createHistorySnapshot])
+
+  const undo = useCallback(() => {
+    const snapshot = historyRef.current.at(-1)
+
+    if (!snapshot) {
+      return
+    }
+
+    historyRef.current = historyRef.current.slice(0, -1)
+    setSelectedSize(snapshot.selectedSize)
+    setSelectedBoothId(snapshot.selectedBoothId)
+    setSelectedFlooringId(snapshot.selectedFlooringId)
+    setAddOnInstances(snapshot.addOnInstances)
+    setHiddenAccessoryIds(snapshot.hiddenAccessoryIds)
+    setAddOnSettings(snapshot.addOnSettings)
+    setAccessoryPlacements(snapshot.accessoryPlacements)
+    setGraphicUploads(snapshot.graphicUploads)
+    setGraphicErrors(snapshot.graphicErrors)
+    setCropRequest(null)
+    setSelectedAccessoryId(null)
+  }, [])
+
   function revokeGraphicUrl(upload) {
     if (upload?.textureUrl) {
       URL.revokeObjectURL(upload.textureUrl)
@@ -163,10 +248,7 @@ export default function App() {
       getGraphicZonesForBooth(nextBooth, nextAccessories),
     )
 
-    setGraphicUploads((currentUploads) => {
-      Object.values(currentUploads).forEach(revokeGraphicUrl)
-      return emptyGraphicState
-    })
+    setGraphicUploads(emptyGraphicState)
     setGraphicErrors({ ...emptyGraphicState })
     setCropRequest(null)
   }
@@ -180,6 +262,7 @@ export default function App() {
     const nextAccessories = getActiveAccessories(booth, nextAddOnInstances)
 
     setAddOnInstances(nextAddOnInstances)
+    setHiddenAccessoryIds([])
     setAddOnSettings(createDefaultAddOnSettings(nextAddOnInstances))
     setAccessoryPlacements(createDefaultAccessoryPlacements(nextAccessories))
 
@@ -190,6 +273,8 @@ export default function App() {
     if (size === selectedSize) {
       return
     }
+
+    recordHistory()
 
     const nextBooth = getDefaultBooth(size)
     const nextAccessories = resetBoothAccessories(nextBooth)
@@ -205,6 +290,7 @@ export default function App() {
     const nextBooth = availableBooths.find((booth) => booth.id === boothId)
 
     if (boothId !== selectedBoothId) {
+      recordHistory()
       const nextAccessories = resetBoothAccessories(nextBooth)
       clearGraphicUploads(nextBooth, nextAccessories)
       setSelectedAccessoryId(null)
@@ -218,6 +304,7 @@ export default function App() {
       getBoothsBySize(size).find((booth) => booth.id === boothId) ?? getDefaultBooth(size)
 
     if (size !== selectedSize || boothId !== selectedBoothId) {
+      recordHistory()
       const nextAccessories = resetBoothAccessories(nextBooth)
       clearGraphicUploads(nextBooth, nextAccessories)
       setSelectedAccessoryId(null)
@@ -236,9 +323,11 @@ export default function App() {
   }
 
   function setGraphicUpload(zone, upload) {
+    recordHistory()
+    if (upload?.textureUrl) {
+      ownedGraphicUrlsRef.current.add(upload.textureUrl)
+    }
     setGraphicUploads((currentUploads) => {
-      revokeGraphicUrl(currentUploads[zone.id])
-
       return {
         ...currentUploads,
         [zone.id]: upload,
@@ -342,9 +431,9 @@ export default function App() {
       return
     }
 
-    setGraphicUploads((currentUploads) => {
-      revokeGraphicUrl(currentUploads[zone.id])
+    recordHistory()
 
+    setGraphicUploads((currentUploads) => {
       return {
         ...currentUploads,
         [zone.id]: null,
@@ -359,6 +448,8 @@ export default function App() {
     if (!addOn) {
       return
     }
+
+    recordHistory()
 
     const instanceId = `manual-${addOnId}-${nextAddOnInstanceId.current}`
     nextAddOnInstanceId.current += 1
@@ -394,6 +485,23 @@ export default function App() {
   function removeAddOn(instanceId) {
     const accessory = activeAccessories.find((item) => item.id === instanceId)
 
+    if (!accessory) {
+      return
+    }
+
+    recordHistory()
+
+    if (!addOnInstances.some((instance) => instance.id === instanceId)) {
+      setHiddenAccessoryIds((currentIds) => [...currentIds, instanceId])
+      setAccessoryPlacements((currentPlacements) => {
+        const nextPlacements = { ...currentPlacements }
+        delete nextPlacements[instanceId]
+        return nextPlacements
+      })
+      setSelectedAccessoryId(null)
+      return
+    }
+
     setAddOnInstances((currentInstances) =>
       currentInstances.filter((instance) => instance.id !== instanceId),
     )
@@ -410,7 +518,6 @@ export default function App() {
     setGraphicUploads((currentUploads) => {
       const nextUploads = { ...currentUploads }
       ;(accessory?.graphicZones ?? []).forEach((zone) => {
-        revokeGraphicUrl(nextUploads[zone.id])
         delete nextUploads[zone.id]
       })
       return nextUploads
@@ -427,6 +534,7 @@ export default function App() {
   }
 
   function updateAddOnSetting(instanceId, setting, value) {
+    recordHistory()
     setAddOnSettings((currentSettings) => ({
       ...currentSettings,
       [instanceId]: {
@@ -436,7 +544,10 @@ export default function App() {
     }))
   }
 
-  function updateAccessoryPlacement(accessoryId, updater) {
+  function updateAccessoryPlacement(accessoryId, updater, shouldRecord = true) {
+    if (shouldRecord) {
+      recordHistory()
+    }
     setAccessoryPlacements((currentPlacements) => {
       const accessory = activeAccessories.find((item) => item.id === accessoryId)
       const currentPlacement = currentPlacements[accessoryId] ?? accessory
@@ -481,7 +592,7 @@ export default function App() {
     updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
       ...currentPlacement,
       position: [...position],
-    }))
+    }), false)
   }
 
   function rotateAccessoryById(accessoryId, direction) {
@@ -502,7 +613,7 @@ export default function App() {
     updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
       ...currentPlacement,
       rotation,
-    }))
+    }), false)
   }
 
   function rotateAccessory(direction) {
@@ -515,6 +626,8 @@ export default function App() {
     if (!selectedAccessory) {
       return
     }
+
+    recordHistory()
 
     setAccessoryPlacements((currentPlacements) => ({
       ...currentPlacements,
@@ -548,6 +661,8 @@ export default function App() {
         booth: selectedBooth,
         flooring: selectedFlooring,
         graphicUploads,
+        accessories: activeAccessories,
+        addOnSettings,
         captures,
       })
       setExportStatus('PDF downloaded.')
@@ -560,14 +675,46 @@ export default function App() {
   }
 
   useEffect(() => {
-    graphicUploadsRef.current = graphicUploads
-  }, [graphicUploads])
+    const ownedGraphicUrls = ownedGraphicUrlsRef.current
 
-  useEffect(() => {
     return () => {
-      Object.values(graphicUploadsRef.current).forEach(revokeGraphicUrl)
+      ownedGraphicUrls.forEach((textureUrl) => revokeGraphicUrl({ textureUrl }))
     }
   }, [])
+
+  useEffect(() => {
+    removeAddOnRef.current = removeAddOn
+  })
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const target = event.target
+      const isEditing =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT')
+
+      if (isEditing) {
+        return
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault()
+        undo()
+        return
+      }
+
+      if (event.key === 'Delete' && selectedAccessoryId) {
+        event.preventDefault()
+        removeAddOnRef.current?.(selectedAccessoryId)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedAccessoryId, undo])
 
   return (
     <main className="app-shell">
@@ -584,11 +731,22 @@ export default function App() {
           onAccessorySelect={setSelectedAccessoryId}
           onAccessoryPositionChange={transformAccessoryPosition}
           onAccessoryRotationChange={setAccessoryRotation}
+          onAccessoryTransformStart={() => {
+            if (!isTransformingAccessoryRef.current) {
+              recordHistory()
+              isTransformingAccessoryRef.current = true
+            }
+          }}
+          onAccessoryTransformEnd={() => {
+            isTransformingAccessoryRef.current = false
+          }}
           onSceneDeselect={() => setSelectedAccessoryId(null)}
           hideSelectionOutline={isExportingPdf}
           hideGrid={isExportingPdf}
         />
       </section>
+
+      <LoadingOverlay />
 
       <div className="orbit-hint" aria-hidden="true">
         <p>Left click + drag: orbit / rotate</p>
@@ -596,6 +754,10 @@ export default function App() {
       </div>
 
       {selectedAccessoryPlacement && (
+        // Displays floor-plan axes for the user: X = left/right (world X),
+        // Y = forward/back depth (world Z), Z = vertical height (world Y).
+        // The gizmo translate handles follow the same convention: X arrow = world X,
+        // depth (green) arrow = world Z shown here as Y, vertical (blue) = world Y shown as Z.
         <output className="selected-position-indicator" aria-label="Selected position">
           <span>X: {formatPositionCoordinate(selectedAccessoryPlacement.position[0])}</span>
           <span>Y: {formatPositionCoordinate(selectedAccessoryPlacement.position[2])}</span>
@@ -633,7 +795,12 @@ export default function App() {
         onAddOnRemove={removeAddOn}
         onAddOnSelect={setSelectedAccessoryId}
         onAddOnSettingChange={updateAddOnSetting}
-        onFlooringChange={setSelectedFlooringId}
+        onFlooringChange={(flooringId) => {
+          if (flooringId !== selectedFlooringId) {
+            recordHistory()
+            setSelectedFlooringId(flooringId)
+          }
+        }}
         onGraphicFileChange={handleGraphicFile}
         onGraphicClear={clearGraphicUpload}
         onExportPdf={exportPdf}
