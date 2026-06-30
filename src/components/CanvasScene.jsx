@@ -26,13 +26,20 @@ import {
   TextureLoader,
   Vector3,
 } from 'three'
-import { flooringTexturePreloadPaths } from '../../data/flooring.js'
 import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
 import AccessoryTransformGizmo from './AccessoryTransformGizmo.jsx'
 
 const CAMERA_TARGET = [0, 1, 0]
 const DESKTOP_CAMERA_POSITION = [2.2, 2.25, 7.5]
 const MOBILE_CAMERA_POSITION = [2.7, 2.4, 9.6]
+const DESKTOP_DPR = [1, 1.5]
+const MOBILE_DPR = [1, 1.25]
+const CANVAS_GL_OPTIONS = {
+  antialias: true,
+  alpha: true,
+  powerPreference: 'high-performance',
+}
+const SCENE_CLEAR_COLOR = '#dfe4eb'
 const FEET_TO_MODEL_UNITS = 0.3048
 const FLOOR_DEPTH_FEET = 10
 const FLOOR_THICKNESS = 0.0127
@@ -620,6 +627,41 @@ function getLocalObjectBounds(object) {
   }
 }
 
+function disposeClonedModelMaterials(scene) {
+  scene.traverse((object) => {
+    if (!object.isMesh) {
+      return
+    }
+
+    getMaterials(object).forEach((material) => {
+      const uploadedTexture = uploadedMaterialMaps.get(material)
+
+      if (uploadedTexture) {
+        uploadedTexture.dispose()
+        uploadedMaterialMaps.delete(material)
+      }
+
+      material.dispose()
+    })
+  })
+}
+
+function useGraphicTextureUrls(graphicZones = [], graphicUploads = {}) {
+  const textureSignature = JSON.stringify(
+    graphicZones.map(
+      (zone) => graphicUploads[zone.id]?.textureUrl ?? zone.defaultTexturePath ?? null,
+    ),
+  )
+
+  return useMemo(() => {
+    const textureUrls = JSON.parse(textureSignature)
+
+    return Object.fromEntries(
+      graphicZones.map((zone, index) => [zone.materialName, textureUrls[index]]),
+    )
+  }, [graphicZones, textureSignature])
+}
+
 function cloneModelScene(scene) {
   const clone = scene.clone(true)
 
@@ -670,6 +712,10 @@ function LoadedModel({
   useEffect(() => {
     prepareSceneForPreview(modelScene, { castsShadow })
   }, [castsShadow, modelScene])
+
+  useEffect(() => {
+    return () => disposeClonedModelMaterials(modelScene)
+  }, [modelScene])
 
   useEffect(() => {
     return applyGraphicTextures(modelScene, graphicTextureUrls, invalidate)
@@ -756,6 +802,72 @@ class ModelErrorBoundary extends Component {
   }
 }
 
+function AccessoryModels({
+  accessory,
+  placement,
+  settings,
+  graphicUploads,
+  selectedAccessoryId,
+  hideSelectionOutline,
+  onAccessorySelect,
+  onAccessoryPositionChange,
+  onAccessoryRotationChange,
+  onDragStart,
+  onDragEnd,
+}) {
+  const graphicTextureUrls = useGraphicTextureUrls(
+    accessory.graphicZones,
+    graphicUploads,
+  )
+  const quantity = Number.isInteger(accessory.defaultQuantity)
+    ? settings.quantity ?? accessory.defaultQuantity
+    : 1
+  const sizeScale = accessory.defaultSize
+    ? (settings.size ?? accessory.defaultSize) / accessory.defaultSize
+    : 1
+
+  return Array.from({ length: quantity }, (_, index) => (
+    <ModelErrorBoundary
+      key={`${accessory.id}-${index}`}
+      resetKey={accessory.modelPath}
+    >
+      <LoadedModel
+        debugLabel={accessory.name}
+        modelPath={accessory.modelPath}
+        position={[
+          placement.position[0],
+          placement.position[1] - index * (accessory.verticalSpacing ?? 0),
+          placement.position[2],
+        ]}
+        rotation={placement.rotation}
+        scale={[sizeScale, sizeScale, sizeScale]}
+        graphicTextureUrls={graphicTextureUrls}
+        castsShadow
+        onSelect={() => onAccessorySelect?.(accessory.id)}
+        dragPosition={placement.position}
+        onPositionChange={(position) =>
+          onAccessoryPositionChange?.(accessory.id, position)
+        }
+        onRotationChange={(rotation) =>
+          onAccessoryRotationChange?.(accessory.id, rotation)
+        }
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        showTransformGizmo={
+          index === 0 &&
+          selectedAccessoryId === accessory.id &&
+          !hideSelectionOutline
+        }
+        allowVerticalMovement={Boolean(accessory.allowVerticalMovement)}
+        gizmoCenterOffsetY={
+          -((quantity - 1) * (accessory.verticalSpacing ?? 0)) / 2
+        }
+        centerPivot
+      />
+    </ModelErrorBoundary>
+  ))
+}
+
 const CanvasScene = forwardRef(function CanvasScene({
   booth,
   flooring,
@@ -808,23 +920,17 @@ const CanvasScene = forwardRef(function CanvasScene({
     setIsDraggingAccessory(false)
     onAccessoryTransformEnd?.()
   }, [onAccessoryTransformEnd])
-  const boothGraphicTextureUrls = useMemo(
-    () =>
-      Object.fromEntries(
-        (booth.graphicZones ?? []).map((zone) => [
-          zone.materialName,
-          graphicUploads[zone.id]?.textureUrl ?? zone.defaultTexturePath,
-        ]),
-      ),
-    [booth.graphicZones, graphicUploads],
+  const boothGraphicTextureUrls = useGraphicTextureUrls(
+    booth.graphicZones,
+    graphicUploads,
   )
   return (
     <Canvas
       shadows="basic"
-      dpr={[1, 1.5]}
+      dpr={isMobile ? MOBILE_DPR : DESKTOP_DPR}
       frameloop="demand"
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      onCreated={({ gl }) => gl.setClearAlpha(0)}
+      gl={CANVAS_GL_OPTIONS}
+      onCreated={({ gl }) => gl.setClearColor(SCENE_CLEAR_COLOR, 0)}
       onPointerMissed={() => {
         if (!isDraggingAccessory) {
           onSceneDeselect?.()
@@ -849,69 +955,34 @@ const CanvasScene = forwardRef(function CanvasScene({
             onStatusChange={handleBoothStatusChange}
           />
         </ModelErrorBoundary>
-
-        {accessories.flatMap((accessory) => {
+      </Suspense>
+      {accessories.map((accessory) => {
           const placement = accessoryPlacements[accessory.id] ?? accessory
           const settings = addOnSettings[accessory.id] ?? {}
-          const quantity = Number.isInteger(accessory.defaultQuantity)
-            ? settings.quantity ?? accessory.defaultQuantity
-            : 1
-          const sizeScale = accessory.defaultSize
-            ? (settings.size ?? accessory.defaultSize) / accessory.defaultSize
-            : 1
-          const graphicTextureUrls = Object.fromEntries(
-            (accessory.graphicZones ?? []).map((zone) => [
-              zone.materialName,
-              graphicUploads[zone.id]?.textureUrl ?? zone.defaultTexturePath,
-            ]),
-          )
-
-          return Array.from({ length: quantity }, (_, index) => (
-            <ModelErrorBoundary
-              key={`${accessory.id}-${index}`}
-              resetKey={accessory.modelPath}
-            >
-              <LoadedModel
-                debugLabel={accessory.name}
-                modelPath={accessory.modelPath}
-                position={[
-                  placement.position[0],
-                  placement.position[1] - index * (accessory.verticalSpacing ?? 0),
-                  placement.position[2],
-                ]}
-                rotation={placement.rotation}
-                scale={[sizeScale, sizeScale, sizeScale]}
-                graphicTextureUrls={graphicTextureUrls}
-                castsShadow
-                onSelect={() => onAccessorySelect?.(accessory.id)}
-                dragPosition={placement.position}
-                onPositionChange={(position) =>
-                  onAccessoryPositionChange?.(accessory.id, position)
-                }
-                onRotationChange={(rotation) =>
-                  onAccessoryRotationChange?.(accessory.id, rotation)
-                }
+          return (
+            <Suspense key={accessory.id} fallback={null}>
+              <AccessoryModels
+                accessory={accessory}
+                placement={placement}
+                settings={settings}
+                graphicUploads={graphicUploads}
+                selectedAccessoryId={selectedAccessoryId}
+                hideSelectionOutline={hideSelectionOutline}
+                onAccessorySelect={onAccessorySelect}
+                onAccessoryPositionChange={onAccessoryPositionChange}
+                onAccessoryRotationChange={onAccessoryRotationChange}
                 onDragStart={handleAccessoryDragStart}
                 onDragEnd={handleAccessoryDragEnd}
-                showTransformGizmo={
-                  index === 0 &&
-                  selectedAccessoryId === accessory.id &&
-                  !hideSelectionOutline
-                }
-                allowVerticalMovement={Boolean(accessory.allowVerticalMovement)}
-                gizmoCenterOffsetY={
-                  -((quantity - 1) * (accessory.verticalSpacing ?? 0)) / 2
-                }
-                centerPivot
               />
-            </ModelErrorBoundary>
-          ))
+            </Suspense>
+          )
         })}
+      <Suspense fallback={null}>
+        <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       </Suspense>
       {(boothModelStatus === 'empty' || boothModelStatus === 'failed') && (
         <FallbackBoothModel booth={booth} />
       )}
-      <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       <OrbitControls
         ref={orbitControlsRef}
         makeDefault
@@ -927,22 +998,3 @@ const CanvasScene = forwardRef(function CanvasScene({
 })
 
 export default CanvasScene
-
-useGLTF.preload('/models/booths/bm101.glb')
-useGLTF.preload('/models/booths/bm102.glb')
-useGLTF.preload('/models/booths/bm103.glb')
-useGLTF.preload('/models/booths/bm104.glb')
-useGLTF.preload('/models/booths/bm105.glb')
-useGLTF.preload('/models/booths/bm106.glb')
-useGLTF.preload('/models/booths/bm107.glb')
-useGLTF.preload('/models/booths/bm108.glb')
-useGLTF.preload('/models/booths/bm109.glb')
-useGLTF.preload('/models/booths/bm110.glb')
-useGLTF.preload('/models/accessories/bm-counter.glb')
-useGLTF.preload('/models/accessories/bm-counter-storage.glb')
-useGLTF.preload('/models/accessories/bm-counter-slim.glb')
-useGLTF.preload('/models/accessories/BM_OctanormCounter.glb')
-useGLTF.preload('/models/accessories/BM_OctanormTable.glb')
-useGLTF.preload('/models/accessories/shelf.glb')
-useGLTF.preload('/models/accessories/55in-TV.glb')
-flooringTexturePreloadPaths.forEach((path) => useTexture.preload(path))

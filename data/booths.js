@@ -44,6 +44,9 @@ const BM105_STORAGE_COUNTER = {
     },
   ],
 }
+// Scene positions use [X, Z, Y], matching the coordinate conversion shown in the editor UI.
+const includedCounterAt = (position) => ({ ...INCLUDED_COUNTER, position })
+
 const BOOTH_OVERRIDES = {
   BM102: {
     modelPath: '/models/booths/bm102.glb',
@@ -188,8 +191,8 @@ const BOOTH_OVERRIDES = {
     modelPath: '/models/booths/bm109.glb',
     includedAccessories: [],
     defaultAddOns: [
-      { addOnId: 'octanorm-counter' },
-      { addOnId: 'octanorm-table' },
+      { addOnId: 'octanorm-counter', position: [0.08, 0, 0] },
+      { addOnId: 'octanorm-table', position: [0.24, 0, 0] },
       { addOnId: 'tv-55', position: [0.75, 0.07, -0.07] },
     ],
     graphicZones: [
@@ -237,6 +240,210 @@ const BOOTH_OVERRIDES = {
         recommendedHeight: 1632,
         maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
         defaultTexturePath: '/textures/10x10_booths/bm110-return.jpg',
+      },
+    ],
+  },
+  BM201: {
+    modelPath: '/models/booths/bm201.glb',
+    includedAccessories: [includedCounterAt([2.17, 0, 0.07])],
+    graphicZones: [
+      {
+        id: 'backwall',
+        label: 'Back Wall Graphic',
+        materialName: 'BM201_graphic_backwall',
+        recommendedWidth: 2000,
+        recommendedHeight: 619,
+        maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm201-backwall.jpg',
+      },
+    ],
+  },
+  BM202: {
+    modelPath: '/models/booths/bm202.glb',
+    includedAccessories: [includedCounterAt([2.17, 0, 0.07])],
+    defaultAddOns: [
+      { addOnId: 'double-counter', position: [0.04, 0, -1.1] },
+      { addOnId: 'tv-55', position: [0.02, -0.13, -0.11] },
+    ],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM202_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 619, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm202-backwall.jpg',
+      },
+      {
+        id: 'header', label: 'Header Graphic', materialName: 'BM202_graphic_header',
+        recommendedWidth: 2000, recommendedHeight: 165, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm202-header.jpg',
+      },
+    ],
+  },
+  BM203: {
+    modelPath: '/models/booths/bm203.glb',
+    includedAccessories: [includedCounterAt([2.17, 0, 0.07])],
+    defaultAddOns: [
+      { addOnId: 'standard-counter', position: [-1.97, 0, -0.99] },
+      { addOnId: 'tv-55', position: [-1.97, 0.08, 0.93] },
+    ],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM203_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 988, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm203-backwall.jpg',
+      },
+      {
+        id: 'header', label: 'Header Graphic', materialName: 'BM203_graphic_header',
+        recommendedWidth: 2000, recommendedHeight: 251, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm203-header.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM203_graphic_left_wall',
+        recommendedWidth: 1640, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm203-left-wall.jpg',
+      },
+    ],
+  },
+  BM204: {
+    modelPath: '/models/booths/bm204.glb',
+    includedAccessories: [includedCounterAt([1.02, 0, -2.04])],
+    defaultAddOns: [{ addOnId: 'tv-55', position: [1.02, 0.08, -0.1] }],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM204_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 1218, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm204-backwall.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM204_graphic_left_wall',
+        recommendedWidth: 1640, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm204-left-wall.jpg',
+      },
+    ],
+  },
+  BM205: {
+    modelPath: '/models/booths/bm205.glb',
+    defaultAddOns: [{ addOnId: 'tv-55', position: [1.51, 0.08, -0.11] }],
+    graphicZones: [
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM205_graphic_left_wall',
+        recommendedWidth: 2000, recommendedHeight: 1625, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm205-left-wall.jpg',
+      },
+      {
+        id: 'right-wall', label: 'Right Wall Graphic', materialName: 'BM205_graphic_right_wall',
+        recommendedWidth: 2000, recommendedHeight: 1625, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm205-right-wall.jpg',
+      },
+    ],
+  },
+  BM206: {
+    modelPath: '/models/booths/bm206.glb',
+    includedAccessories: [includedCounterAt([-1.98, 0, 0.16])],
+    defaultAddOns: [
+      { addOnId: 'tv-55', position: [1.5, 0.19, -0.07] },
+      { addOnId: 'networking-table', position: [1.49, 0, -0.21] },
+    ],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM206_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 1218, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm206-backwall.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM206_graphic_left_wall',
+        recommendedWidth: 2000, recommendedHeight: 2439, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm206-left-wall.jpg',
+      },
+    ],
+  },
+  BM207: {
+    modelPath: '/models/booths/bm207.glb',
+    includedAccessories: [includedCounterAt([-1.48, 0, 0.1])],
+    defaultAddOns: [
+      { addOnId: 'standard-counter', position: [1.5, 0, -2.03] },
+      { addOnId: 'tv-55', position: [1.5, 0.08, -0.07] },
+    ],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM207_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 812, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm207-backwall.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM207_graphic_left_wall',
+        recommendedWidth: 2000, recommendedHeight: 1625, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm207-left-wall.jpg',
+      },
+      {
+        id: 'right-wall', label: 'Right Wall Graphic', materialName: 'BM207_graphic_right_wall',
+        recommendedWidth: 2000, recommendedHeight: 1625, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm207-right-wall.jpg',
+      },
+    ],
+  },
+  BM208: {
+    modelPath: '/models/booths/bm208.glb',
+    includedAccessories: [includedCounterAt([2.01, 0, 0.16])],
+    defaultAddOns: [
+      { addOnId: 'tv-55', position: [-1.95, -0.1, 1.84] },
+      { addOnId: 'tv-55', position: [1.51, 0.08, -0.09] },
+      { addOnId: 'double-counter', position: [1.48, 0, -1.11] },
+    ],
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM208_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 812, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm208-backwall.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM208_graphic_kiosk',
+        recommendedWidth: 1423, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm208-left-wall.jpg',
+      },
+    ],
+  },
+  BM209: {
+    modelPath: '/models/booths/bm209.glb',
+    includedAccessories: [includedCounterAt([-1.49, 0, -0.02])],
+    defaultAddOns: [
+      { addOnId: 'tv-55', position: [0.52, 0, 2.82], settings: { size: 43 } },
+      { addOnId: 'tv-55', position: [-1.47, -0.04, -0.04], settings: { size: 43 } },
+    ],
+    graphicZones: [
+      {
+        id: 'closet-front', label: 'Closet Front Graphic', materialName: 'BM209_graphic_closet_front',
+        recommendedWidth: 817, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm209-closet-front.jpg',
+      },
+      {
+        id: 'column-back', label: 'Column Back Graphic', materialName: 'BM209_graphic_column_back',
+        recommendedWidth: 817, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm209-column-back.jpg',
+      },
+      {
+        id: 'column-front', label: 'Column Front Graphic', materialName: 'BM209_graphic_column_front',
+        recommendedWidth: 817, recommendedHeight: 2000, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm209-column-front.jpg',
+      },
+      {
+        id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM209_graphic_left_wall',
+        recommendedWidth: 2000, recommendedHeight: 988, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm209-left-wall.jpg',
+      },
+      {
+        id: 'right-wall', label: 'Right Wall Graphic', materialName: 'BM209_graphic_right_wall',
+        recommendedWidth: 2000, recommendedHeight: 1241, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm209-right-wall.jpg',
+      },
+    ],
+  },
+  BM210: {
+    modelPath: '/models/booths/bm210.glb',
+    graphicZones: [
+      {
+        id: 'backwall', label: 'Back Wall Graphic', materialName: 'BM210_graphic_backwall',
+        recommendedWidth: 2000, recommendedHeight: 600, maxBytes: MAX_GRAPHIC_UPLOAD_BYTES,
+        defaultTexturePath: '/textures/10x20_booths/bm210-backwall.jpg',
       },
     ],
   },

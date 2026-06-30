@@ -78,14 +78,6 @@ function PanelSubsection({ title, children }) {
   )
 }
 
-function PlaceholderButton({ children }) {
-  return (
-    <button type="button" className="placeholder-button" disabled>
-      {children}
-    </button>
-  )
-}
-
 function AddOnCards({
   addOns,
   accessories,
@@ -309,6 +301,7 @@ export default function RightPanel({
   onGraphicFileChange,
   onGraphicClear,
   onExportPdf,
+  onResetBooth,
   isExportingPdf,
   exportStatus,
 }) {
@@ -524,14 +517,35 @@ export default function RightPanel({
             onOpen={toggleSection}
           >
             <p className="panel-note">
-              Follow-up request submission will be connected after the MVP configurator flow is
-              defined.
+              Export your layout as a PDF and email it to{' '}
+              <a href="mailto:exhibitorservices@sourceoneevents.com">
+                exhibitorservices@sourceoneevents.com
+              </a>
+              .
             </p>
-            <PlaceholderButton>Request follow-up</PlaceholderButton>
           </Section>
         </div>
 
-        <footer className="panel-footer">© 2026 SourceOne Events. All rights reserved.</footer>
+        <footer className="panel-footer">
+          <p>Progress saves automatically in this browser.</p>
+          <button type="button" className="reset-button" onClick={onResetBooth}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            Reset Booth
+          </button>
+        </footer>
       </aside>
     </>
   )

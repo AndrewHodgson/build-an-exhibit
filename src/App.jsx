@@ -27,17 +27,18 @@ const ASPECT_RATIO_TOLERANCE = 0.01
 const ACCESSORY_MOVE_STEP = 0.5 * INCHES_TO_METERS
 const HISTORY_LIMIT = 10
 
-function LoadingOverlay() {
+function LoadingOverlay({ isBusy = false, busyLabel = '' }) {
   const { active, progress } = useProgress()
-  const isVisible = active || progress < 100
+  const isVisible = isBusy || active || progress < 100
   const roundedProgress = Math.round(progress)
+  const label = isBusy ? busyLabel || 'Preparing PDF...' : `Loading ${roundedProgress}%`
 
   if (!isVisible) {
     return null
   }
 
   return (
-    <div className="loading-overlay" aria-live="polite" aria-label={`Loading ${roundedProgress}%`}>
+    <div className="loading-overlay" aria-live="polite" aria-label={label}>
       <div className="loading-progress">
         <div className="loading-progress-track">
           <div
@@ -45,7 +46,7 @@ function LoadingOverlay() {
             style={{ width: `${roundedProgress}%` }}
           />
         </div>
-        <p>Loading {roundedProgress}%</p>
+        <p>{label}</p>
       </div>
     </div>
   )
@@ -267,6 +268,20 @@ export default function App() {
     setAccessoryPlacements(createDefaultAccessoryPlacements(nextAccessories))
 
     return nextAccessories
+  }
+
+  function resetCurrentBooth() {
+    recordHistory()
+    const nextBooth = getDefaultBooth()
+    const nextAccessories = resetBoothAccessories(nextBooth)
+
+    clearGraphicUploads(nextBooth, nextAccessories)
+    setSelectedSize(nextBooth.size)
+    setSelectedBoothId(nextBooth.id)
+    setSelectedFlooringId(defaultFlooringId)
+    setSelectedAccessoryId(null)
+    setExportStatus('')
+    setIsWelcomeOpen(true)
   }
 
   function selectSize(size) {
@@ -746,7 +761,7 @@ export default function App() {
         />
       </section>
 
-      <LoadingOverlay />
+      <LoadingOverlay isBusy={isExportingPdf} busyLabel={exportStatus} />
 
       <div className="orbit-hint" aria-hidden="true">
         <p>Left click + drag: orbit / rotate</p>
@@ -804,6 +819,7 @@ export default function App() {
         onGraphicFileChange={handleGraphicFile}
         onGraphicClear={clearGraphicUpload}
         onExportPdf={exportPdf}
+        onResetBooth={resetCurrentBooth}
         isExportingPdf={isExportingPdf}
         exportStatus={exportStatus}
       />
