@@ -20,16 +20,22 @@ import CropModal from './components/CropModal.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import WelcomeModal from './components/WelcomeModal.jsx'
 import { createBoothSummaryPdf } from './utils/exportPdf.js'
+import {
+  clampAccessoryPosition,
+  getAccessoryVerticalMaxY,
+} from './utils/placementBounds.js'
 
 const ASPECT_RATIO_TOLERANCE = 0.01
-const FEET_TO_METERS = 0.3048
-const HORIZONTAL_PLACEMENT_LIMIT = 25 * FEET_TO_METERS
-const VERTICAL_PLACEMENT_LIMIT = 25 * FEET_TO_METERS
 const HISTORY_LIMIT = 10
 
-function LoadingOverlay({ isBusy = false, busyLabel = '' }) {
-  const { active, progress } = useProgress()
-  const isVisible = isBusy || active || progress < 100
+function LoadingOverlay({ isBusy = false, busyLabel = '', isSceneLoading = false }) {
+  const { progress } = useProgress()
+  // The overlay covers the canvas ONLY for: the initial booth load, a real
+  // booth/model change (both surfaced via isSceneLoading), or an explicit busy
+  // task such as PDF export (isBusy). It deliberately no longer keys off the
+  // global useProgress `active` flag, which fired for every add-on, carpet, and
+  // graphic load and caused the whole scene to appear to reload/flash white.
+  const isVisible = isBusy || isSceneLoading
   const roundedProgress = Math.round(progress)
   const label = isBusy ? busyLabel || 'Preparing PDF...' : `Loading ${roundedProgress}%`
 
@@ -121,18 +127,6 @@ function createDefaultAccessoryPlacements(accessories) {
   )
 }
 
-function clamp(value, minimum, maximum) {
-  return Math.min(Math.max(value, minimum), maximum)
-}
-
-function clampAccessoryPosition(position) {
-  return [
-    clamp(position[0], -HORIZONTAL_PLACEMENT_LIMIT, HORIZONTAL_PLACEMENT_LIMIT),
-    clamp(position[1], 0, VERTICAL_PLACEMENT_LIMIT),
-    clamp(position[2], -HORIZONTAL_PLACEMENT_LIMIT, HORIZONTAL_PLACEMENT_LIMIT),
-  ]
-}
-
 function getAddOnLimitMessage(addOn, activeSceneAddOns) {
   if (activeSceneAddOns.length >= sceneAddOnLimits.total) {
     return 'Limit reached. Remove an item before adding another.'
@@ -182,10 +176,23 @@ export default function App() {
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [exportStatus, setExportStatus] = useState('')
   const [addOnLimitMessage, setAddOnLimitMessage] = useState('')
+  // True while the booth model itself is loading (first paint + booth changes).
+  // CanvasScene reports this; add-ons/carpet/graphics do not affect it.
+  const [isBoothLoading, setIsBoothLoading] = useState(true)
   const ownedGraphicUrlsRef = useRef(new Set())
   const historyRef = useRef([])
   const isTransformingAccessoryRef = useRef(false)
   const removeAddOnRef = useRef(null)
+  // Per-accessory minimum origin Y (the app's "Z" axis), keyed by accessory id.
+  // CanvasScene measures each object's bounding box and reports how far it may be
+  // lowered before its geometry would sink below the floor. Wall-mounted shelves
+  // and TVs report a negative minimum; floor objects report 0. Held in a ref so
+  // the drag-time clamp reads the latest value without re-rendering the scene.
+  const accessoryVerticalMinsRef = useRef({})
+
+  const handleAccessoryVerticalMinChange = useCallback((accessoryId, verticalMin) => {
+    accessoryVerticalMinsRef.current[accessoryId] = verticalMin
+  }, [])
 
   const availableBooths = useMemo(() => getBoothsBySize(selectedSize), [selectedSize])
   const selectedFlooring = useMemo(
@@ -606,10 +613,18 @@ export default function App() {
         ...currentPlacements,
         [accessoryId]: (() => {
           const nextPlacement = updater(currentPlacement)
+          const verticalMin = accessoryVerticalMinsRef.current[accessoryId]
+          // Shelves and TVs (wall-mounted) get a lower ceiling; floor objects
+          // keep the full global vertical limit.
+          const verticalMax = getAccessoryVerticalMaxY(accessory)
 
           return {
             ...nextPlacement,
-            position: clampAccessoryPosition(nextPlacement.position),
+            position: clampAccessoryPosition(
+              nextPlacement.position,
+              verticalMin,
+              verticalMax,
+            ),
           }
         })(),
       }
@@ -736,10 +751,16 @@ export default function App() {
           onSceneDeselect={() => setSelectedAccessoryId(null)}
           hideSelectionOutline={isExportingPdf}
           hideGrid={isExportingPdf}
+          onBoothLoadingChange={setIsBoothLoading}
+          onAccessoryVerticalMinChange={handleAccessoryVerticalMinChange}
         />
       </section>
 
-      <LoadingOverlay isBusy={isExportingPdf} busyLabel={exportStatus} />
+      <LoadingOverlay
+        isBusy={isExportingPdf}
+        busyLabel={exportStatus}
+        isSceneLoading={isBoothLoading}
+      />
 
       <div className="orbit-hint" aria-hidden="true">
         <p>Left click + drag: orbit / rotate</p>

@@ -30,6 +30,7 @@ import {
 } from 'three'
 import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
 import { glbMaterialColorOverrides } from '../../data/sceneConfig.js'
+import { getAccessoryVerticalMinY } from '../utils/placementBounds.js'
 import AccessoryTransformGizmo from './AccessoryTransformGizmo.jsx'
 
 const CAMERA_TARGET = [0, 1, 0]
@@ -1003,6 +1004,7 @@ function LoadedModel({
   gizmoCenterOffsetY = 0,
   centerPivot = false,
   highlightedMaterialName,
+  onBoundsChange,
 }) {
   const { scene } = useGLTF(modelPath)
   const modelScene = useMemo(() => cloneModelScene(scene), [scene])
@@ -1054,6 +1056,12 @@ function LoadedModel({
   useEffect(() => {
     onStatusChange?.(isRenderable ? 'ready' : 'empty')
   }, [isRenderable, onStatusChange])
+
+  // Surface the model's measured local bounds so placement clamping can derive a
+  // per-object floor limit from real geometry instead of assuming origin==bottom.
+  useEffect(() => {
+    onBoundsChange?.(bounds)
+  }, [bounds, onBoundsChange])
 
   useEffect(() => {
     if (isRenderable) {
@@ -1150,6 +1158,7 @@ function AccessoryModels({
   onDragStart,
   onDragEnd,
   highlightedGraphicZoneId,
+  onVerticalMinChange,
 }) {
   const graphicTextureUrls = useGraphicTextureUrls(
     accessory.graphicZones,
@@ -1161,6 +1170,40 @@ function AccessoryModels({
   const sizeScale = accessory.defaultSize
     ? (settings.size ?? accessory.defaultSize) / accessory.defaultSize
     : 1
+  const verticalSpacing = accessory.verticalSpacing ?? 0
+  // Bounds of a single model copy; all stacked shelf copies share the same box.
+  const [modelBounds, setModelBounds] = useState(null)
+
+  // Report how far this accessory may be lowered before its geometry reaches the
+  // floor. Only wall-mounted objects (shelves, TVs) use a bounds-derived limit;
+  // floor-based objects keep the plain floor at 0 so their movement is unchanged.
+  // Recomputes when the shelf count or TV size changes, since both shift the
+  // object's lowest point relative to its origin.
+  useEffect(() => {
+    if (!onVerticalMinChange) {
+      return
+    }
+
+    const verticalMin = accessory.allowVerticalMovement
+      ? getAccessoryVerticalMinY({
+          bounds: modelBounds,
+          sizeScale,
+          quantity,
+          verticalSpacing,
+        })
+      : 0
+
+    onVerticalMinChange(accessory.id, verticalMin)
+  }, [
+    accessory.allowVerticalMovement,
+    accessory.id,
+    modelBounds,
+    onVerticalMinChange,
+    quantity,
+    sizeScale,
+    verticalSpacing,
+  ])
+
   const materialOption = useMemo(() => {
     if (!accessory.defaultColor) {
       return null
@@ -1192,6 +1235,7 @@ function AccessoryModels({
         graphicTextureUrls={graphicTextureUrls}
         materialMapping={accessory.materialMapping}
         materialOption={materialOption}
+        onBoundsChange={index === 0 ? setModelBounds : undefined}
         castsShadow
         onSelect={() => onAccessorySelect?.(accessory.id)}
         dragPosition={placement.position}
@@ -1240,6 +1284,8 @@ const CanvasScene = forwardRef(function CanvasScene({
   hideSelectionOutline = false,
   hideGrid = false,
   highlightedGraphicZoneId,
+  onBoothLoadingChange,
+  onAccessoryVerticalMinChange,
 }, ref) {
   const isMobile = useIsMobileViewport()
   const orbitControlsRef = useRef(null)
@@ -1262,6 +1308,14 @@ const CanvasScene = forwardRef(function CanvasScene({
   const handleBoothError = useCallback(() => {
     setBoothModelState({ status: 'failed', modelPath: booth.modelPath })
   }, [booth.modelPath])
+
+  // Report only the *booth* model's load state upward. The full-screen loading
+  // overlay is driven by this signal, so it appears for the initial load and
+  // real booth/model changes -- but never for add-ons, carpet swaps, or graphic
+  // uploads, which load inside their own Suspense boundaries below.
+  useEffect(() => {
+    onBoothLoadingChange?.(boothModelStatus === 'loading')
+  }, [boothModelStatus, onBoothLoadingChange])
   const handleAccessoryDragStart = useCallback(() => {
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false
@@ -1302,10 +1356,20 @@ const CanvasScene = forwardRef(function CanvasScene({
       <Suspense fallback={null}>
         <SceneEnvironment isMobile={isMobile} />
       </Suspense>
-      <Suspense
-        key={booth.id}
-        fallback={null}
-      >
+      {/*
+        Each loadable part of the scene lives in its own Suspense boundary. A
+        Suspense boundary reverts to its fallback whenever ANY descendant
+        suspends, so keeping booth, accessories, and flooring separate means a
+        newly loading asset (an add-on GLB, a carpet texture) can never blank
+        the rest of the already-loaded scene.
+      */}
+
+      {/*
+        Booth model. Keyed by booth.id so it remounts only on a real booth
+        change (the one case where the full overlay is expected). Its load state
+        is what drives the overlay via handleBoothStatusChange.
+      */}
+      <Suspense key={booth.id} fallback={null}>
         <ModelErrorBoundary
           resetKey={booth.modelPath}
           onError={handleBoothError}
@@ -1322,11 +1386,20 @@ const CanvasScene = forwardRef(function CanvasScene({
             }
           />
         </ModelErrorBoundary>
-        {accessories.map((accessory) => {
-          const placement = accessoryPlacements[accessory.id] ?? accessory
-          const settings = addOnSettings[accessory.id] ?? {}
-          return (
-            <group key={accessory.id}>
+      </Suspense>
+
+      {/*
+        One Suspense boundary per accessory. Adding an add-on suspends only its
+        own boundary while its model loads; the booth and every other accessory
+        stay visible. Already-loaded GLBs are served from drei's useGLTF cache,
+        so re-adding an accessory does not suspend at all.
+      */}
+      {accessories.map((accessory) => {
+        const placement = accessoryPlacements[accessory.id] ?? accessory
+        const settings = addOnSettings[accessory.id] ?? {}
+        return (
+          <Suspense key={accessory.id} fallback={null}>
+            <group>
               <AccessoryModels
                 accessory={accessory}
                 placement={placement}
@@ -1340,10 +1413,19 @@ const CanvasScene = forwardRef(function CanvasScene({
                 onDragStart={handleAccessoryDragStart}
                 onDragEnd={handleAccessoryDragEnd}
                 highlightedGraphicZoneId={highlightedGraphicZoneId}
+                onVerticalMinChange={onAccessoryVerticalMinChange}
               />
             </group>
-          )
-        })}
+          </Suspense>
+        )
+      })}
+
+      {/*
+        Flooring. Its own boundary so switching carpet color only re-suspends
+        the floor slab (briefly, and only the first time each texture loads),
+        never the booth scene.
+      */}
+      <Suspense fallback={null}>
         <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       </Suspense>
       {(boothModelStatus === 'empty' || boothModelStatus === 'failed') && (
