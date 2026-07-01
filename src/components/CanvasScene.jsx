@@ -1,4 +1,5 @@
 import {
+  Environment,
   OrbitControls,
   PerspectiveCamera,
   useGLTF,
@@ -12,6 +13,7 @@ import {
   useEffect,
   forwardRef,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -52,6 +54,12 @@ const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
 const GRAPHIC_HIGHLIGHT_COLOR = new Color('#38bdf8')
+const reportedMaterialMappingWarnings = new Set()
+const STANDARD_METAL = {
+  color: '#cccccc',
+  metalness: 0.9909,
+  roughness: 0.0773,
+}
 
 function useIsMobileViewport() {
   const [isMobile, setIsMobile] = useState(() =>
@@ -80,6 +88,25 @@ function SceneLights() {
       <directionalLight position={[-5, 3, -4]} intensity={0.38} />
       <directionalLight position={[0, 3.5, 6]} intensity={0.28} />
     </>
+  )
+}
+
+const ENVIRONMENT_HDRI_PATH = '/HDR/dancing_hall_1k.hdr'
+// The HDRI is used purely as image-based lighting so PBR metals get real
+// reflections. `background` stays false so the app background is unchanged, and
+// a sub-1 intensity keeps the polished metal from blowing out.
+const ENVIRONMENT_INTENSITY = 0.7
+
+// Loads the HDRI once and applies it as `scene.environment` (never the visible
+// background). Kept in its own Suspense boundary so it is not remounted when
+// booths/accessories change. Lower cubemap resolution on mobile for perf.
+function SceneEnvironment({ isMobile }) {
+  return (
+    <Environment
+      files={ENVIRONMENT_HDRI_PATH}
+      environmentIntensity={ENVIRONMENT_INTENSITY}
+      resolution={isMobile ? 128 : 256}
+    />
   )
 }
 
@@ -638,6 +665,227 @@ function getLocalObjectBounds(object) {
   }
 }
 
+function describeSceneMeshes(scene) {
+  const descriptions = []
+
+  scene.traverse((object) => {
+    if (!object.isMesh) {
+      return
+    }
+
+    descriptions.push(
+      `${object.name || '(unnamed)'} [mesh: ${object.geometry?.name || '(unnamed)'}, materials: ${getMaterials(object).map((material) => material.name || '(unnamed)').join(', ')}]`,
+    )
+  })
+
+  return descriptions.join('; ')
+}
+
+function warnMaterialMapping(debugLabel, role, scene) {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
+  const warningKey = `${debugLabel}:${role}`
+
+  if (reportedMaterialMappingWarnings.has(warningKey)) {
+    return
+  }
+
+  reportedMaterialMappingWarnings.add(warningKey)
+  console.warn(
+    `[Accessory materials] ${debugLabel}: unable to find the ${role} mesh. Available meshes: ${describeSceneMeshes(scene)}`,
+  )
+}
+
+// GLTFLoader sanitizes node names (spaces become underscores) and often drops
+// geometry names entirely, so exact-string matching against the authoring names
+// in the GLB fails at runtime. Normalize both sides to a space-collapsed,
+// lower-cased form so 'Ale Bar Stool Base' matches the loaded 'Ale_Bar_Stool_Base'.
+function normalizeStructuralName(name) {
+  return (name ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function findMappedMeshes(scene, mapping, debugLabel, role) {
+  if (!mapping) {
+    return []
+  }
+
+  const meshes = []
+  scene.traverse((object) => {
+    if (object.isMesh) {
+      meshes.push(object)
+    }
+  })
+
+  const objectNameSet = new Set(
+    (mapping.objectNames ?? []).map(normalizeStructuralName).filter(Boolean),
+  )
+  const meshNameSet = new Set(
+    (mapping.meshNames ?? []).map(normalizeStructuralName).filter(Boolean),
+  )
+
+  // Match on the object (node) name first: it is stable across material swaps,
+  // so re-applying a colour after the surface material has already been renamed
+  // still resolves to the same mesh.
+  const structuralMatches = meshes.filter((mesh) => {
+    const objectName = normalizeStructuralName(mesh.name)
+    const geometryName = normalizeStructuralName(mesh.geometry?.name)
+
+    return (
+      (objectName && objectNameSet.has(objectName)) ||
+      (geometryName && meshNameSet.has(geometryName))
+    )
+  })
+  const matches = structuralMatches.length
+    ? structuralMatches
+    : meshes.filter((mesh) =>
+        getMaterials(mesh).some((material) =>
+          mapping.materialNames?.includes(material.name),
+        ),
+      )
+
+  if (!matches.length) {
+    warnMaterialMapping(debugLabel, role, scene)
+  }
+
+  return matches
+}
+
+function replaceMeshMaterial(mesh, createMaterial) {
+  const previousMaterials = getMaterials(mesh)
+  const nextMaterials = previousMaterials.map((_, index) => createMaterial(index))
+
+  mesh.material = Array.isArray(mesh.material) ? nextMaterials : nextMaterials[0]
+  previousMaterials.forEach((material) => {
+    const uploadedTexture = uploadedMaterialMaps.get(material)
+
+    if (uploadedTexture) {
+      uploadedTexture.dispose()
+      uploadedMaterialMaps.delete(material)
+    }
+
+    material.dispose()
+  })
+
+  return nextMaterials
+}
+
+function applyStandardMetal(scene, mapping, debugLabel) {
+  findMappedMeshes(scene, mapping, debugLabel, 'metal/base').forEach((mesh) => {
+    replaceMeshMaterial(
+      mesh,
+      () =>
+        new MeshStandardMaterial({
+          name: 'Metal',
+          color: STANDARD_METAL.color,
+          metalness: STANDARD_METAL.metalness,
+          roughness: STANDARD_METAL.roughness,
+        }),
+    )
+  })
+}
+
+function applyAccessoryMaterialOption(
+  scene,
+  mapping,
+  option,
+  debugLabel,
+  invalidate,
+  onReady,
+) {
+  if (!option) {
+    onReady?.()
+    return undefined
+  }
+
+  const matchedMeshes = findMappedMeshes(scene, mapping, debugLabel, 'configurable surface')
+  if (!matchedMeshes.length) {
+    onReady?.()
+    return undefined
+  }
+
+  if (option.color) {
+    matchedMeshes.forEach((mesh) => {
+      replaceMeshMaterial(
+        mesh,
+        () =>
+          new MeshStandardMaterial({
+            name: `Accessory tabletop ${option.value}`,
+            color: option.color,
+            metalness: 0,
+            roughness: 0.55,
+          }),
+      )
+    })
+    invalidate()
+    onReady?.()
+    return undefined
+  }
+
+  if (!option.texturePath) {
+    return undefined
+  }
+
+  let isActive = true
+  const loader = new TextureLoader()
+
+  loader
+    .loadAsync(option.texturePath)
+    .then((texture) => {
+      if (!isActive) {
+        texture.dispose()
+        return
+      }
+
+      texture.colorSpace = SRGBColorSpace
+      texture.flipY = false
+      texture.wrapS = ClampToEdgeWrapping
+      texture.wrapT = ClampToEdgeWrapping
+      texture.needsUpdate = true
+
+      matchedMeshes.forEach((mesh, meshIndex) => {
+        const materials = replaceMeshMaterial(mesh, (materialIndex) => {
+          const map = meshIndex === 0 && materialIndex === 0 ? texture : texture.clone()
+          const material = new MeshStandardMaterial({
+            name: `Ale Bar Stool Seat ${option.value}`,
+            color: '#ffffff',
+            map,
+            metalness: 0,
+            roughness: 0.5,
+          })
+          uploadedMaterialMaps.set(material, map)
+          return material
+        })
+        materials.forEach((material) => {
+          material.needsUpdate = true
+        })
+      })
+      invalidate()
+      if (isActive) {
+        onReady?.()
+      }
+    })
+    .catch((error) => {
+      if (isActive && import.meta.env.DEV) {
+        console.warn(
+          `[Accessory materials] ${debugLabel}: unable to load ${option.texturePath}.`,
+          error,
+        )
+      }
+      if (isActive) {
+        onReady?.()
+      }
+    })
+
+  return () => {
+    isActive = false
+  }
+}
+
 function applyGraphicHighlight(scene, materialName, invalidate) {
   if (!materialName) {
     return undefined
@@ -741,6 +989,8 @@ function LoadedModel({
   scale = [1, 1, 1],
   onStatusChange,
   graphicTextureUrls = {},
+  materialMapping,
+  materialOption,
   castsShadow = false,
   onSelect,
   dragPosition = position,
@@ -764,6 +1014,10 @@ function LoadedModel({
     ? [-pivotOffset[0], -pivotOffset[1], -pivotOffset[2]]
     : [0, 0, 0]
   const pivotPosition = centerPivot ? pivotOffset : [0, 0, 0]
+  const materialOptionKey = materialOption?.texturePath ?? materialOption?.value ?? null
+  const [readyMaterialOptionKey, setReadyMaterialOptionKey] = useState(null)
+  const isMaterialReady =
+    !materialOption?.texturePath || readyMaterialOptionKey === materialOptionKey
 
   useEffect(() => {
     prepareSceneForPreview(modelScene, { castsShadow })
@@ -776,6 +1030,22 @@ function LoadedModel({
   useEffect(() => {
     return applyGraphicTextures(modelScene, graphicTextureUrls, invalidate)
   }, [graphicTextureUrls, invalidate, modelScene])
+
+  useLayoutEffect(() => {
+    applyStandardMetal(modelScene, materialMapping?.metal, debugLabel)
+    invalidate()
+  }, [debugLabel, invalidate, materialMapping, modelScene])
+
+  useLayoutEffect(() => {
+    return applyAccessoryMaterialOption(
+      modelScene,
+      materialMapping?.surface,
+      materialOption,
+      debugLabel,
+      invalidate,
+      () => setReadyMaterialOptionKey(materialOptionKey),
+    )
+  }, [debugLabel, invalidate, materialMapping, materialOption, materialOptionKey, modelScene])
 
   useEffect(() => {
     return applyGraphicHighlight(modelScene, highlightedMaterialName, invalidate)
@@ -812,7 +1082,12 @@ function LoadedModel({
         }
       }}
     >
-      <group position={pivotPosition} rotation={rotation} scale={scale}>
+      <group
+        position={pivotPosition}
+        rotation={rotation}
+        scale={scale}
+        visible={isMaterialReady}
+      >
         <primitive object={modelScene} position={modelOffset} />
       </group>
       {showTransformGizmo && (
@@ -886,6 +1161,18 @@ function AccessoryModels({
   const sizeScale = accessory.defaultSize
     ? (settings.size ?? accessory.defaultSize) / accessory.defaultSize
     : 1
+  const materialOption = useMemo(() => {
+    if (!accessory.defaultColor) {
+      return null
+    }
+
+    const selectedColor = settings.color ?? accessory.defaultColor
+    const option = accessory.colorOptions?.find(
+      (colorOption) => colorOption.value === selectedColor,
+    )
+
+    return option ?? null
+  }, [accessory.colorOptions, accessory.defaultColor, settings.color])
 
   return Array.from({ length: quantity }, (_, index) => (
     <ModelErrorBoundary
@@ -903,6 +1190,8 @@ function AccessoryModels({
         rotation={placement.rotation}
         scale={[sizeScale, sizeScale, sizeScale]}
         graphicTextureUrls={graphicTextureUrls}
+        materialMapping={accessory.materialMapping}
+        materialOption={materialOption}
         castsShadow
         onSelect={() => onAccessorySelect?.(accessory.id)}
         dragPosition={placement.position}
@@ -1010,6 +1299,9 @@ const CanvasScene = forwardRef(function CanvasScene({
         fov={36}
       />
       <SceneLights />
+      <Suspense fallback={null}>
+        <SceneEnvironment isMobile={isMobile} />
+      </Suspense>
       <Suspense
         key={`${booth.id}:${accessories.map((accessory) => accessory.id).join(',')}`}
         fallback={null}

@@ -707,6 +707,11 @@ dd {
   line-height: 1.45;
 }
 
+.contact-note,
+.contact-note a {
+  font-weight: 500;
+}
+
 .texture-swatch-group {
   display: grid;
   gap: 8px;

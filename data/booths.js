@@ -323,7 +323,27 @@ const BOOTH_OVERRIDES = {
   },
   BM205: {
     modelPath: '/models/booths/bm205.glb',
-    defaultAddOns: [{ addOnId: 'tv-55', position: [1.51, 0.08, -0.11] }],
+    defaultAddOns: [
+      { addOnId: 'tv-55', position: [1.51, 0.08, -0.11] },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [0.5, 0, -0.36],
+        rotation: [0, Math.PI, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [1.5, 0, -0.36],
+        rotation: [0, Math.PI, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [2.5, 0, -0.36],
+        rotation: [0, Math.PI, 0],
+        settings: { color: 'White' },
+      },
+    ],
     graphicZones: [
       {
         id: 'left-wall', label: 'Left Wall Graphic', materialName: 'BM205_graphic_left_wall',
@@ -343,6 +363,42 @@ const BOOTH_OVERRIDES = {
     defaultAddOns: [
       { addOnId: 'tv-55', position: [1.5, 0.19, -0.07] },
       { addOnId: 'networking-table', position: [1.49, 0, -0.21] },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [0.7, 0, -1],
+        rotation: [0, Math.PI / 2, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [0.7, 0, -0.25],
+        rotation: [0, Math.PI / 2, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [0.7, 0, 0.5],
+        rotation: [0, Math.PI / 2, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [2.35, 0, -1],
+        rotation: [0, (3 * Math.PI) / 2, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [2.35, 0, -0.25],
+        rotation: [0, (3 * Math.PI) / 2, 0],
+        settings: { color: 'White' },
+      },
+      {
+        addOnId: 'ale-bar-stool',
+        position: [2.35, 0, 0.5],
+        rotation: [0, (3 * Math.PI) / 2, 0],
+        settings: { color: 'White' },
+      },
     ],
     graphicZones: [
       {

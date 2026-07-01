@@ -1,7 +1,5 @@
 import { MAX_GRAPHIC_UPLOAD_BYTES } from './graphicZones.js'
 
-const PLACEHOLDER_THUMBNAIL = '/thumbnails/booths/10x10/BM10x10_Featured.jpg'
-
 export const INCHES_TO_METERS = 0.0254
 export const ACCESSORY_ROTATION_STEP = Math.PI / 12
 export const addOnCategories = ['Furniture', 'Counters', 'Accessories']
@@ -13,7 +11,7 @@ export const addOns = [
     name: 'Standard Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/standard_counter_thumbnail.jpg',
     position: [0, 0, 0.30],
     manualPosition: [0, 0, 0.30],
     rotation: [0, 0, 0],
@@ -35,7 +33,7 @@ export const addOns = [
     name: 'Storage Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter-storage.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/standard_counter_storage_thumbnail.jpg',
     position: [0, 0, 0.30],
     manualPosition: [0, 0, 0.30],
     rotation: [0, 0, 0],
@@ -57,7 +55,7 @@ export const addOns = [
     name: 'Slim Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter-slim.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/standard_counter_slim_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 1.22],
     rotation: [0, 0, 0],
@@ -79,7 +77,7 @@ export const addOns = [
     name: 'Double Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-double-counter.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/standard_counter_double_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 0],
     rotation: [0, 0, 0],
@@ -90,7 +88,7 @@ export const addOns = [
     name: 'Networking Table',
     category: 'Counters',
     modelPath: '/models/accessories/bm-networking-table.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/networking_table_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 0],
     rotation: [0, 0, 0],
@@ -101,7 +99,7 @@ export const addOns = [
     name: 'Octanorm Counter',
     category: 'Counters',
     modelPath: '/models/accessories/BM_OctanormCounter.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/octanorm_counter_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 0],
     rotation: [0, 0, 0],
@@ -123,7 +121,7 @@ export const addOns = [
     name: 'Octanorm Table',
     category: 'Counters',
     modelPath: '/models/accessories/BM_OctanormTable.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/octanorm_table_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 0],
     rotation: [0, 0, 0],
@@ -144,7 +142,7 @@ export const addOns = [
     name: 'Shelf',
     category: 'Accessories',
     modelPath: '/models/accessories/shelf.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/shelf_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 0.97],
     rotation: [0, 0, 0],
@@ -163,7 +161,7 @@ export const addOns = [
     name: 'TV',
     category: 'Accessories',
     modelPath: '/models/accessories/55in-TV.glb',
-    thumbnailPath: PLACEHOLDER_THUMBNAIL,
+    thumbnailPath: '/thumbnails/add-on/tv_thumbnail.jpg',
     position: [0, 0, 0],
     manualPosition: [0, 0, 1.31],
     rotation: [0, 0, 0],
@@ -185,6 +183,84 @@ export const addOns = [
       },
     ],
   },
+  {
+    id: 'ale-bar-stool',
+    name: 'Ale Bar Stool',
+    category: 'Furniture',
+    modelPath: '/models/accessories/Ale-Bar-Stool.glb',
+    thumbnailPath: '/thumbnails/add-on/ale_barstool_thumbnail.jpg',
+    position: [0, 0, 0],
+    manualPosition: [0, 0, 0],
+    rotation: [0, 0, 0],
+    defaultColor: 'Black',
+    colorSettingLabel: 'Seat color',
+    materialMapping: {
+      metal: {
+        objectNames: ['Ale Bar Stool Base'],
+        meshNames: ['Plane.001'],
+        materialNames: ['Metal'],
+      },
+      surface: {
+        objectNames: ['Ale Bar Stool Seat'],
+        meshNames: ['Ale Bar Stool Black'],
+        materialNames: ['Ale Bar Stool'],
+      },
+    },
+    colorOptions: [
+      {
+        value: 'Black',
+        label: 'Black',
+        texturePath: '/textures/accessories/Ale_Barstool_Black.png',
+      },
+      {
+        value: 'White',
+        label: 'White',
+        texturePath: '/textures/accessories/Ale_Barstool_White.png',
+      },
+    ],
+    summaryFields: [
+      { setting: 'color', defaultProperty: 'defaultColor', label: 'Color' },
+    ],
+  },
+  {
+    id: 'brava-bar-table',
+    name: 'Brava Bar Table',
+    category: 'Furniture',
+    modelPath: '/models/accessories/Brava-Bar-Table.glb',
+    thumbnailPath: '/thumbnails/add-on/brava_bar_table_thumbnail.jpg',
+    position: [0, 0, 0],
+    manualPosition: [0, 0, 0],
+    rotation: [0, 0, 0],
+    defaultColor: 'Black',
+    colorSettingLabel: 'Tabletop color',
+    materialMapping: {
+      metal: {
+        objectNames: ['Brava Bar Table Base'],
+        meshNames: ['Cylinder.001'],
+        materialNames: ['Metal'],
+      },
+      surface: {
+        objectNames: ['Brava Bar Table Top'],
+        meshNames: ['Cylinder.002'],
+        materialNames: ['Black metal'],
+      },
+    },
+    colorOptions: [
+      {
+        value: 'Black',
+        label: 'Black',
+        color: '#111111',
+      },
+      {
+        value: 'White',
+        label: 'White',
+        color: '#f2f2f2',
+      },
+    ],
+    summaryFields: [
+      { setting: 'color', defaultProperty: 'defaultColor', label: 'Tabletop color' },
+    ],
+  },
 ]
 
 export function getAddOnById(id) {
@@ -197,6 +273,9 @@ function createInstanceSettings(addOn, settings = {}) {
       ? { quantity: settings.quantity ?? addOn.defaultQuantity }
       : {}),
     ...(addOn?.defaultSize ? { size: settings.size ?? addOn.defaultSize } : {}),
+    ...(addOn?.defaultColor
+      ? { color: settings.color ?? addOn.defaultColor }
+      : {}),
   }
 }
 

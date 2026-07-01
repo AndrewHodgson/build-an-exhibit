@@ -90,3 +90,48 @@ test('supports empty booths and future furniture metadata', () => {
     'Lounge Chair - Quantity: 2',
   ])
 })
+
+test('keeps stool and table colors per instance and includes them in details', () => {
+  const booth = { includedAccessories: [] }
+  const instances = [
+    createManualAddOnInstance('ale-bar-stool', 'stool-1'),
+    createManualAddOnInstance('ale-bar-stool', 'stool-2'),
+    createManualAddOnInstance('brava-bar-table', 'table-1'),
+    createManualAddOnInstance('brava-bar-table', 'table-2'),
+  ]
+  const settings = createDefaultAddOnSettings(instances)
+  settings['stool-2'] = { color: 'White' }
+  settings['table-1'] = { color: 'White' }
+  const accessories = getActiveAccessories(booth, instances)
+
+  assert.deepEqual(createAccessorySummaryItems(accessories, settings), [
+    'Ale Bar Stool #1 - Color: Black',
+    'Ale Bar Stool #2 - Color: White',
+    'Brava Bar Table #1 - Tabletop color: White',
+    'Brava Bar Table #2 - Tabletop color: Black',
+  ])
+})
+
+test('creates independent white default stools for BM205 and BM206', () => {
+  for (const [code, expectedCount] of [['BM205', 3], ['BM206', 6]]) {
+    const booth = getBooth(code)
+    const instances = createDefaultAddOnInstances(booth)
+    const stoolInstances = instances.filter(
+      (instance) => instance.addOnId === 'ale-bar-stool',
+    )
+    const accessories = getActiveAccessories(booth, instances)
+    const stoolAccessories = accessories.filter(
+      (accessory) => accessory.addOnId === 'ale-bar-stool',
+    )
+    const settings = createDefaultAddOnSettings(instances)
+
+    assert.equal(stoolInstances.length, expectedCount)
+    assert.equal(new Set(stoolInstances.map((instance) => instance.id)).size, expectedCount)
+    assert.ok(stoolInstances.every((instance) => instance.settings.color === 'White'))
+    assert.ok(
+      createAccessorySummaryItems(stoolAccessories, settings).every((item) =>
+        item.endsWith('Color: White'),
+      ),
+    )
+  }
+})

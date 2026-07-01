@@ -198,6 +198,23 @@ function AddOnOptions({ addOn, accessory, settings, onSettingChange }) {
           </select>
         </label>
       )}
+      {addOn.defaultColor && (
+        <label className="add-on-option-control">
+          <span>{addOn.colorSettingLabel ?? 'Color'}</span>
+          <select
+            value={settings.color ?? addOn.defaultColor}
+            onChange={(event) =>
+              onSettingChange(accessory.id, 'color', event.target.value)
+            }
+          >
+            {addOn.colorOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <p className="panel-note">Select the add-on in the preview to move or rotate it.</p>
     </div>
   )
@@ -240,6 +257,7 @@ function GraphicUploadZone({
   onHighlightChange,
 }) {
   const inputId = `graphic-upload-${zone.id}`
+  const displayLabel = zone.label.replace(/\s+Graphic$/i, '')
   const zoneRef = useRef(null)
 
   const clearHighlightUnlessActive = (event) => {
@@ -266,9 +284,9 @@ function GraphicUploadZone({
       onBlur={clearHighlightUnlessActive}
     >
       <div className="graphic-upload-heading">
-        <h2>{zone.label}</h2>
+        <h2>{displayLabel}</h2>
         <p>
-          Recommended: {zone.recommendedWidth} × {zone.recommendedHeight} px
+          Size: {zone.recommendedWidth} × {zone.recommendedHeight} px
         </p>
         <p>JPG or PNG, max 4 MB per file</p>
       </div>
@@ -303,9 +321,7 @@ function GraphicUploadZone({
             Clear graphic
           </button>
         </div>
-      ) : (
-        <p className="graphic-upload-empty">No graphic uploaded.</p>
-      )}
+      ) : null}
 
       {error && <p className="graphic-error">{error}</p>}
     </div>
@@ -573,16 +589,15 @@ export default function RightPanel({
 
           <Section
             id="contact-sourceone"
-            title="Contact SourceOne"
+            title="Contact SourceOne Events"
             openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
-            <p className="panel-note">
-              Export your layout as a PDF and email it to{' '}
+            <p className="panel-note contact-note">
+              Export your layout as a PDF and email it to:{' '}
               <a href="mailto:exhibitorservices@sourceoneevents.com">
                 exhibitorservices@sourceoneevents.com
               </a>
-              .
             </p>
           </Section>
         </div>
