@@ -358,7 +358,7 @@ export default function RightPanel({
   exportStatus,
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
-  const [openSectionId, setOpenSectionId] = useState('booth-selection')
+  const [openSectionId, setOpenSectionId] = useState('help')
   const selectedAccessory = accessories.find(
     (accessory) => accessory.id === selectedAccessoryId,
   )
@@ -427,6 +427,42 @@ export default function RightPanel({
         </div>
 
         <div className="panel-sections">
+          <Section
+            id="help"
+            title="Help / How to Use"
+            openSectionId={visibleOpenSectionId}
+            onOpen={toggleSection}
+          >
+            <ul className="how-to-list">
+              <li>
+                Select a booth layout under Booth Selection. Standard options are
+                available in 10x10 and 10x20 layouts. Contact us to customize an
+                exhibit based on your size and needs.
+              </li>
+              <li>Replace the default booth graphics under the Graphics section.</li>
+              <li>
+                Each booth includes default options. Add more furniture and
+                accessories under Add-Ons.
+              </li>
+              <li>Change the carpet type and color under Carpet &amp; Flooring.</li>
+              <li>
+                Export your booth layout as a PDF with booth details under the Export
+                section.
+              </li>
+              <li>
+                To move around the scene, left click and drag to orbit. On mobile, use
+                one finger to orbit.
+              </li>
+              <li>
+                Zoom in and out with the mouse scroll wheel. On mobile, pinch to zoom.
+              </li>
+              <li>
+                To move furniture or an accessory, select the add-on, then use the
+                arrows to move it or the rotation circle to rotate it.
+              </li>
+            </ul>
+          </Section>
+
           <Section
             id="booth-selection"
             title="Booth Selection"

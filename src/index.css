@@ -356,6 +356,25 @@ dd {
   padding-top: 12px;
 }
 
+.how-to-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.38;
+}
+
+.how-to-list li {
+  padding-left: 2px;
+}
+
+.how-to-list li::marker {
+  color: var(--sourceone-blue);
+}
+
 .field-group,
 .section-inner,
 .panel-note {
