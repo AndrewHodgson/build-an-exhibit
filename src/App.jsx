@@ -121,16 +121,6 @@ function createDefaultAccessoryPlacements(accessories) {
   )
 }
 
-function formatPositionCoordinate(value) {
-  const rounded = Math.round((value ?? 0) * 100) / 100
-  return (Object.is(rounded, -0) ? 0 : rounded).toFixed(2)
-}
-
-function formatRotation(rotation = 0) {
-  const degrees = (rotation * 180) / Math.PI
-  return `${(Math.round(degrees * 10) / 10).toFixed(1)}\u00b0`
-}
-
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum)
 }
@@ -217,13 +207,6 @@ export default function App() {
     () => getGraphicZonesForBooth(selectedBooth, activeAccessories),
     [activeAccessories, selectedBooth],
   )
-  const selectedAccessory = activeAccessories.find(
-    (accessory) => accessory.id === selectedAccessoryId,
-  )
-  const selectedAccessoryPlacement = selectedAccessory
-    ? accessoryPlacements[selectedAccessory.id] ?? selectedAccessory
-    : null
-
   const createHistorySnapshot = useCallback(
     () => ({
       selectedSize,
@@ -762,21 +745,6 @@ export default function App() {
         <p>Left click + drag: orbit / rotate</p>
         <p>Scroll wheel: zoom in / out</p>
       </div>
-
-      {selectedAccessoryPlacement && (
-        // Displays floor-plan axes for the user: X = left/right (world X),
-        // Y = forward/back depth (world Z), Z = vertical height (world Y).
-        // The gizmo translate handles follow the same convention: X arrow = world X,
-        // depth (green) arrow = world Z shown here as Y, vertical (blue) = world Y shown as Z.
-        <output className="selected-position-indicator" aria-label="Selected position">
-          <span>X: {formatPositionCoordinate(selectedAccessoryPlacement.position[0])}</span>
-          <span>Y: {formatPositionCoordinate(selectedAccessoryPlacement.position[2])}</span>
-          <span>Z: {formatPositionCoordinate(selectedAccessoryPlacement.position[1])}</span>
-          <span>
-            Rotation: {formatRotation(selectedAccessoryPlacement.rotation[1])}
-          </span>
-        </output>
-      )}
 
       <RightPanel
         boothSizes={boothSizes}

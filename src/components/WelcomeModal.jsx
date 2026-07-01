@@ -27,7 +27,7 @@ export default function WelcomeModal({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div className="modal-backdrop welcome-backdrop" role="presentation">
       <section
         className="welcome-modal"
         role="dialog"

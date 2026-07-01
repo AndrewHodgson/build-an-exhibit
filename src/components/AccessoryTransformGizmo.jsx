@@ -36,6 +36,7 @@ const VERTICAL_AXIS_COLOR = '#3b82f6'
 const VERTICAL_AXIS_ACTIVE_COLOR = '#93c5fd'
 const ROTATE_COLOR = '#f59e0b'
 const ROTATE_ACTIVE_COLOR = '#fcd34d'
+const GIZMO_RENDER_ORDER = 1000
 
 function normalizeAngle(angle) {
   return Math.atan2(Math.sin(angle), Math.cos(angle))
@@ -220,6 +221,12 @@ export default function AccessoryTransformGizmo({
     }
   }, [])
 
+  useEffect(() => {
+    groupRef.current?.traverse((object) => {
+      object.renderOrder = GIZMO_RENDER_ORDER
+    })
+  }, [])
+
   const moveInteraction = (event) => {
     const current = interaction.current
 
@@ -283,6 +290,7 @@ export default function AccessoryTransformGizmo({
         <meshBasicMaterial
           color={isHighlighted('x') ? X_AXIS_ACTIVE_COLOR : X_AXIS_COLOR}
           depthTest={false}
+          depthWrite={false}
         />
       </mesh>
       <mesh position={[0.75, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
@@ -290,6 +298,7 @@ export default function AccessoryTransformGizmo({
         <meshBasicMaterial
           color={isHighlighted('x') ? X_AXIS_ACTIVE_COLOR : X_AXIS_COLOR}
           depthTest={false}
+          depthWrite={false}
         />
       </mesh>
       <mesh
@@ -304,7 +313,12 @@ export default function AccessoryTransformGizmo({
         onPointerCancel={finishInteraction}
       >
         <cylinderGeometry args={[0.09, 0.09, 0.9, 10]} />
-        <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+        <meshBasicMaterial
+          transparent
+          opacity={0.001}
+          depthTest={false}
+          depthWrite={false}
+        />
       </mesh>
 
       <mesh position={[0, 0, 0.35]} rotation={[Math.PI / 2, 0, 0]}>
@@ -314,6 +328,7 @@ export default function AccessoryTransformGizmo({
             isHighlighted('depth') ? DEPTH_AXIS_ACTIVE_COLOR : DEPTH_AXIS_COLOR
           }
           depthTest={false}
+          depthWrite={false}
         />
       </mesh>
       <mesh position={[0, 0, 0.75]} rotation={[Math.PI / 2, 0, 0]}>
@@ -323,6 +338,7 @@ export default function AccessoryTransformGizmo({
             isHighlighted('depth') ? DEPTH_AXIS_ACTIVE_COLOR : DEPTH_AXIS_COLOR
           }
           depthTest={false}
+          depthWrite={false}
         />
       </mesh>
       <mesh
@@ -337,7 +353,12 @@ export default function AccessoryTransformGizmo({
         onPointerCancel={finishInteraction}
       >
         <cylinderGeometry args={[0.09, 0.09, 0.9, 10]} />
-        <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+        <meshBasicMaterial
+          transparent
+          opacity={0.001}
+          depthTest={false}
+          depthWrite={false}
+        />
       </mesh>
 
       {allowVerticalMovement && (
@@ -351,6 +372,7 @@ export default function AccessoryTransformGizmo({
                   : VERTICAL_AXIS_COLOR
               }
               depthTest={false}
+              depthWrite={false}
             />
           </mesh>
           <mesh position={[0, 0.75, 0]}>
@@ -362,6 +384,7 @@ export default function AccessoryTransformGizmo({
                   : VERTICAL_AXIS_COLOR
               }
               depthTest={false}
+              depthWrite={false}
             />
           </mesh>
           <mesh
@@ -375,7 +398,12 @@ export default function AccessoryTransformGizmo({
             onPointerCancel={finishInteraction}
           >
             <cylinderGeometry args={[0.09, 0.09, 0.9, 10]} />
-            <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+            <meshBasicMaterial
+              transparent
+              opacity={0.001}
+              depthTest={false}
+              depthWrite={false}
+            />
           </mesh>
         </>
       )}
@@ -385,6 +413,7 @@ export default function AccessoryTransformGizmo({
         <meshBasicMaterial
           color={isHighlighted('rotate') ? ROTATE_ACTIVE_COLOR : ROTATE_COLOR}
           depthTest={false}
+          depthWrite={false}
         />
       </mesh>
       <mesh
@@ -395,7 +424,12 @@ export default function AccessoryTransformGizmo({
         onPointerDown={beginRotate}
       >
         <torusGeometry args={[0.32, 0.17, 12, 48]} />
-        <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+        <meshBasicMaterial
+          transparent
+          opacity={0.001}
+          depthTest={false}
+          depthWrite={false}
+        />
       </mesh>
     </group>
   )

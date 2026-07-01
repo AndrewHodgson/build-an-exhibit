@@ -7,7 +7,7 @@ import {
   getActiveAccessories,
 } from '../../data/addOns.js'
 import { getBoothsBySize } from '../../data/booths.js'
-import { createAccessorySummaryItems } from './exportPdf.js'
+import { createAccessorySummaryItems, createGraphicDetailRows } from './exportPdf.js'
 
 function getBooth(code) {
   return [...getBoothsBySize('10x10'), ...getBoothsBySize('10x20')].find(
@@ -134,4 +134,33 @@ test('creates independent white default stools for BM205 and BM206', () => {
       ),
     )
   }
+})
+
+test('creates dynamic PDF graphic rows for multi-zone booths and accessories', () => {
+  const booth = getBooth('BM205')
+  const instances = [
+    ...createDefaultAddOnInstances(booth),
+    createManualAddOnInstance('standard-counter', 'standard-counter-1'),
+  ]
+  const accessories = getActiveAccessories(booth, instances)
+  const counterZone = accessories.find(
+    (accessory) => accessory.id === 'standard-counter-1',
+  ).graphicZones[0]
+  const rows = createGraphicDetailRows({
+    booth,
+    accessories,
+    graphicUploads: {
+      'left-wall': { fileName: 'left-wall-art.jpg' },
+      [counterZone.id]: { fileName: 'counter-art.png' },
+    },
+  })
+
+  assert.deepEqual(rows, [
+    ['Left Wall Graphic', 'Uploaded: left-wall-art.jpg'],
+    ['Right Wall Graphic', 'Default'],
+    ['Counter Graphic', 'Default'],
+    ['TV 1 — TV Screen Graphic', 'Default'],
+    [counterZone.label, 'Uploaded: counter-art.png'],
+  ])
+  assert.equal(rows.some(([label]) => label === 'Backwall Graphic'), false)
 })

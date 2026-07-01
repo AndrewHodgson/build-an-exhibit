@@ -603,7 +603,7 @@ export default function RightPanel({
         </div>
 
         <footer className="panel-footer">
-          <p>Progress saves automatically in this browser.</p>
+          <p>Your layout is temporary and will reset if you reload the page.</p>
           <button type="button" className="reset-button" onClick={onResetBooth}>
             <svg
               width="14"

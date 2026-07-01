@@ -86,6 +86,22 @@ function formatGraphicStatus(upload) {
   return `Uploaded: ${upload.fileName}`
 }
 
+export function createGraphicDetailRows({
+  booth,
+  accessories = [],
+  graphicUploads = {},
+} = {}) {
+  const zones = [
+    ...(booth?.graphicZones ?? []),
+    ...accessories.flatMap((accessory) => accessory.graphicZones ?? []),
+  ]
+
+  return zones.map((zone) => [
+    zone.label,
+    formatGraphicStatus(graphicUploads[zone.id]),
+  ])
+}
+
 function addDetailRow(doc, label, value, x, y, labelWidth, valueWidth) {
   const text = String(value || 'None')
   const lines = doc.splitTextToSize(text, valueWidth)
@@ -265,6 +281,11 @@ export async function buildBoothSummaryPdf({
     addOnSettings,
     graphicUploads,
   )
+  const graphicDetailRows = createGraphicDetailRows({
+    booth,
+    accessories,
+    graphicUploads,
+  })
 
   doc.setFillColor(255, 255, 255)
   doc.rect(0, 0, pageWidth, pageHeight, 'F')
@@ -403,8 +424,7 @@ export async function buildBoothSummaryPdf({
     ['Booth Size', booth.size],
     ['Booth Type', booth.type],
     ['Carpet / Flooring', flooring.label],
-    ['Backwall Graphic', formatGraphicStatus(graphicUploads.backwall)],
-    ['Counter Graphic', formatGraphicStatus(graphicUploads.counter)],
+    ...graphicDetailRows,
     [
       'Add-Ons / Furniture',
       accessorySummaryItems.length ? accessorySummaryItems.join('\n') : 'None',
