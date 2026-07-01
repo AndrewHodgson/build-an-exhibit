@@ -1303,7 +1303,7 @@ const CanvasScene = forwardRef(function CanvasScene({
         <SceneEnvironment isMobile={isMobile} />
       </Suspense>
       <Suspense
-        key={`${booth.id}:${accessories.map((accessory) => accessory.id).join(',')}`}
+        key={booth.id}
         fallback={null}
       >
         <ModelErrorBoundary
