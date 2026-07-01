@@ -9,6 +9,7 @@ export const addOnCategories = ['Furniture', 'Counters', 'Accessories']
 export const addOns = [
   {
     id: 'standard-counter',
+    limitGroup: 'counter',
     name: 'Standard Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter.glb',
@@ -30,6 +31,7 @@ export const addOns = [
   },
   {
     id: 'storage-counter',
+    limitGroup: 'counter',
     name: 'Storage Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter-storage.glb',
@@ -51,6 +53,7 @@ export const addOns = [
   },
   {
     id: 'slim-counter',
+    limitGroup: 'counter',
     name: 'Slim Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-counter-slim.glb',
@@ -72,6 +75,7 @@ export const addOns = [
   },
   {
     id: 'double-counter',
+    limitGroup: 'counter',
     name: 'Double Counter',
     category: 'Counters',
     modelPath: '/models/accessories/bm-double-counter.glb',
@@ -82,6 +86,7 @@ export const addOns = [
   },
   {
     id: 'networking-table',
+    limitGroup: 'counter',
     name: 'Networking Table',
     category: 'Counters',
     modelPath: '/models/accessories/bm-networking-table.glb',
@@ -92,6 +97,7 @@ export const addOns = [
   },
   {
     id: 'octanorm-counter',
+    limitGroup: 'counter',
     name: 'Octanorm Counter',
     category: 'Counters',
     modelPath: '/models/accessories/BM_OctanormCounter.glb',
@@ -113,6 +119,7 @@ export const addOns = [
   },
   {
     id: 'octanorm-table',
+    limitGroup: 'counter',
     name: 'Octanorm Table',
     category: 'Counters',
     modelPath: '/models/accessories/BM_OctanormTable.glb',
@@ -152,7 +159,8 @@ export const addOns = [
   },
   {
     id: 'tv-55',
-    name: '55in TV',
+    limitGroup: 'tv',
+    name: 'TV',
     category: 'Accessories',
     modelPath: '/models/accessories/55in-TV.glb',
     thumbnailPath: PLACEHOLDER_THUMBNAIL,

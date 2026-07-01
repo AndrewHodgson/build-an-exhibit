@@ -27,6 +27,7 @@ import {
   Vector3,
 } from 'three'
 import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
+import { glbMaterialColorOverrides } from '../../data/sceneConfig.js'
 import AccessoryTransformGizmo from './AccessoryTransformGizmo.jsx'
 
 const CAMERA_TARGET = [0, 1, 0]
@@ -50,6 +51,7 @@ const EXPORT_BACKGROUND_COLOR = '#ffffff'
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
+const GRAPHIC_HIGHLIGHT_COLOR = new Color('#38bdf8')
 
 function useIsMobileViewport() {
   const [isMobile, setIsMobile] = useState(() =>
@@ -493,6 +495,15 @@ function prepareSceneForPreview(scene, { castsShadow = false } = {}) {
 
     object.castShadow = castsShadow
     object.receiveShadow = false
+
+    getMaterials(object).forEach((material) => {
+      const colorOverride = glbMaterialColorOverrides[material.name]
+
+      if (colorOverride && material.color) {
+        material.color.set(colorOverride)
+        material.needsUpdate = true
+      }
+    })
   })
 }
 
@@ -627,6 +638,50 @@ function getLocalObjectBounds(object) {
   }
 }
 
+function applyGraphicHighlight(scene, materialName, invalidate) {
+  if (!materialName) {
+    return undefined
+  }
+
+  const restorations = []
+
+  scene.traverse((object) => {
+    if (!object.isMesh) {
+      return
+    }
+
+    getMaterials(object).forEach((material) => {
+      if (material.name !== materialName) {
+        return
+      }
+
+      if (material.emissive) {
+        const emissive = material.emissive.clone()
+        const emissiveIntensity = material.emissiveIntensity
+        material.emissive.copy(GRAPHIC_HIGHLIGHT_COLOR)
+        material.emissiveIntensity = 0.75
+        restorations.push(() => {
+          material.emissive.copy(emissive)
+          material.emissiveIntensity = emissiveIntensity
+        })
+      } else if (material.color) {
+        const color = material.color.clone()
+        material.color.lerp(GRAPHIC_HIGHLIGHT_COLOR, 0.55)
+        restorations.push(() => material.color.copy(color))
+      }
+
+      material.needsUpdate = true
+    })
+  })
+
+  invalidate()
+
+  return () => {
+    restorations.forEach((restore) => restore())
+    invalidate()
+  }
+}
+
 function disposeClonedModelMaterials(scene) {
   scene.traverse((object) => {
     if (!object.isMesh) {
@@ -697,6 +752,7 @@ function LoadedModel({
   allowVerticalMovement = false,
   gizmoCenterOffsetY = 0,
   centerPivot = false,
+  highlightedMaterialName,
 }) {
   const { scene } = useGLTF(modelPath)
   const modelScene = useMemo(() => cloneModelScene(scene), [scene])
@@ -720,6 +776,10 @@ function LoadedModel({
   useEffect(() => {
     return applyGraphicTextures(modelScene, graphicTextureUrls, invalidate)
   }, [graphicTextureUrls, invalidate, modelScene])
+
+  useEffect(() => {
+    return applyGraphicHighlight(modelScene, highlightedMaterialName, invalidate)
+  }, [highlightedMaterialName, invalidate, modelScene])
 
   useEffect(() => {
     onStatusChange?.(isRenderable ? 'ready' : 'empty')
@@ -814,6 +874,7 @@ function AccessoryModels({
   onAccessoryRotationChange,
   onDragStart,
   onDragEnd,
+  highlightedGraphicZoneId,
 }) {
   const graphicTextureUrls = useGraphicTextureUrls(
     accessory.graphicZones,
@@ -863,6 +924,11 @@ function AccessoryModels({
           -((quantity - 1) * (accessory.verticalSpacing ?? 0)) / 2
         }
         centerPivot
+        highlightedMaterialName={
+          accessory.graphicZones?.find(
+            (zone) => zone.id === highlightedGraphicZoneId,
+          )?.materialName
+        }
       />
     </ModelErrorBoundary>
   ))
@@ -884,6 +950,7 @@ const CanvasScene = forwardRef(function CanvasScene({
   onSceneDeselect,
   hideSelectionOutline = false,
   hideGrid = false,
+  highlightedGraphicZoneId,
 }, ref) {
   const isMobile = useIsMobileViewport()
   const orbitControlsRef = useRef(null)
@@ -943,7 +1010,10 @@ const CanvasScene = forwardRef(function CanvasScene({
         fov={36}
       />
       <SceneLights />
-      <Suspense fallback={null}>
+      <Suspense
+        key={`${booth.id}:${accessories.map((accessory) => accessory.id).join(',')}`}
+        fallback={null}
+      >
         <ModelErrorBoundary
           resetKey={booth.modelPath}
           onError={handleBoothError}
@@ -953,14 +1023,18 @@ const CanvasScene = forwardRef(function CanvasScene({
             modelPath={booth.modelPath}
             graphicTextureUrls={boothGraphicTextureUrls}
             onStatusChange={handleBoothStatusChange}
+            highlightedMaterialName={
+              booth.graphicZones?.find(
+                (zone) => zone.id === highlightedGraphicZoneId,
+              )?.materialName
+            }
           />
         </ModelErrorBoundary>
-      </Suspense>
-      {accessories.map((accessory) => {
+        {accessories.map((accessory) => {
           const placement = accessoryPlacements[accessory.id] ?? accessory
           const settings = addOnSettings[accessory.id] ?? {}
           return (
-            <Suspense key={accessory.id} fallback={null}>
+            <group key={accessory.id}>
               <AccessoryModels
                 accessory={accessory}
                 placement={placement}
@@ -973,11 +1047,11 @@ const CanvasScene = forwardRef(function CanvasScene({
                 onAccessoryRotationChange={onAccessoryRotationChange}
                 onDragStart={handleAccessoryDragStart}
                 onDragEnd={handleAccessoryDragEnd}
+                highlightedGraphicZoneId={highlightedGraphicZoneId}
               />
-            </Suspense>
+            </group>
           )
         })}
-      <Suspense fallback={null}>
         <ExhibitFloor boothSize={booth.size} flooring={flooring} hideGrid={hideGrid} />
       </Suspense>
       {(boothModelStatus === 'empty' || boothModelStatus === 'failed') && (
@@ -989,7 +1063,7 @@ const CanvasScene = forwardRef(function CanvasScene({
         enabled={!isDraggingAccessory}
         enablePan={false}
         minDistance={4.8}
-        maxDistance={11}
+        maxDistance={22}
         target={CAMERA_TARGET}
       />
       <SceneCaptureBridge boothSize={booth.size} captureRef={ref} />

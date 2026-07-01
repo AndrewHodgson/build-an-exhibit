@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { addOnCategories } from '../../data/addOns.js'
 import {
   premiumFlooringOptions,
@@ -76,6 +76,17 @@ function PanelSubsection({ title, children }) {
       {children}
     </div>
   )
+}
+
+function getAccessoryDetail(accessory, settings = {}) {
+  return (accessory.summaryFields ?? [])
+    .flatMap((field) => {
+      const value = settings[field.setting] ?? accessory[field.defaultProperty]
+      return value === undefined || value === null || value === ''
+        ? []
+        : [`${value}${field.suffix ?? ''}`]
+    })
+    .join(', ')
 }
 
 function AddOnCards({
@@ -226,11 +237,34 @@ function GraphicUploadZone({
   error,
   onGraphicFileChange,
   onGraphicClear,
+  onHighlightChange,
 }) {
   const inputId = `graphic-upload-${zone.id}`
+  const zoneRef = useRef(null)
+
+  const clearHighlightUnlessActive = (event) => {
+    const zoneElement = zoneRef.current
+
+    if (
+      zoneElement?.matches(':hover') ||
+      (event.relatedTarget && zoneElement?.contains(event.relatedTarget))
+    ) {
+      return
+    }
+
+    onHighlightChange(null)
+  }
 
   return (
-    <div className="graphic-upload-zone">
+    <div
+      ref={zoneRef}
+      className="graphic-upload-zone"
+      tabIndex="0"
+      onMouseEnter={() => onHighlightChange(zone.id)}
+      onMouseLeave={clearHighlightUnlessActive}
+      onFocus={() => onHighlightChange(zone.id)}
+      onBlur={clearHighlightUnlessActive}
+    >
       <div className="graphic-upload-heading">
         <h2>{zone.label}</h2>
         <p>
@@ -250,7 +284,7 @@ function GraphicUploadZone({
         }}
       />
       <label className="upload-button" htmlFor={inputId}>
-        Upload JPG or PNG
+        Upload
       </label>
 
       {upload ? (
@@ -287,6 +321,7 @@ export default function RightPanel({
   addOns,
   selectedAccessoryId,
   addOnSettings,
+  addOnLimitMessage,
   selectedFlooringId,
   graphicZones,
   graphicUploads,
@@ -300,6 +335,7 @@ export default function RightPanel({
   onFlooringChange,
   onGraphicFileChange,
   onGraphicClear,
+  onGraphicHighlightChange,
   onExportPdf,
   onResetBooth,
   isExportingPdf,
@@ -317,6 +353,13 @@ export default function RightPanel({
   const addAddOn = (addOnId) => {
     setOpenSectionId('add-ons')
     onAddOnAdd(addOnId)
+  }
+  const selectBooth = (boothId) => {
+    onBoothChange(boothId)
+
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      setIsMobileDrawerOpen(false)
+    }
   }
   const toggleSection = (sectionId) => {
     if (selectedAddOn) {
@@ -383,7 +426,7 @@ export default function RightPanel({
             <LayoutCards
               booths={booths}
               selectedBooth={selectedBooth}
-              onBoothChange={onBoothChange}
+              onBoothChange={selectBooth}
             />
           </Section>
 
@@ -413,7 +456,17 @@ export default function RightPanel({
               <ul className="included-list">
                 <li>BeMatrix wall structure</li>
                 {accessories.map((accessory) => (
-                  <li key={accessory.id}>{accessory.name}</li>
+                  <li key={accessory.id}>
+                    {accessory.name}
+                    {getAccessoryDetail(
+                      accessory,
+                      addOnSettings[accessory.id],
+                    ) &&
+                      ` — ${getAccessoryDetail(
+                        accessory,
+                        addOnSettings[accessory.id],
+                      )}`}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -429,16 +482,19 @@ export default function RightPanel({
               Upload JPG or PNG previews for the booth graphics. Images are used only in this
               browser preview and are not stored.
             </p>
-            {graphicZones.map((zone) => (
-              <GraphicUploadZone
-                key={zone.id}
-                zone={zone}
-                upload={graphicUploads[zone.id]}
-                error={graphicErrors[zone.id]}
-                onGraphicFileChange={onGraphicFileChange}
-                onGraphicClear={onGraphicClear}
-              />
-            ))}
+            <div className="graphic-upload-grid">
+              {graphicZones.map((zone) => (
+                <GraphicUploadZone
+                  key={zone.id}
+                  zone={zone}
+                  upload={graphicUploads[zone.id]}
+                  error={graphicErrors[zone.id]}
+                  onGraphicFileChange={onGraphicFileChange}
+                  onGraphicClear={onGraphicClear}
+                  onHighlightChange={onGraphicHighlightChange}
+                />
+              ))}
+            </div>
           </Section>
 
           <Section
@@ -447,6 +503,11 @@ export default function RightPanel({
             openSectionId={visibleOpenSectionId}
             onOpen={toggleSection}
           >
+            {addOnLimitMessage && (
+              <p className="add-on-limit-message" role="status">
+                {addOnLimitMessage}
+              </p>
+            )}
             <AddOnOptions
               addOn={selectedAddOn}
               accessory={selectedAccessory}

@@ -33,7 +33,7 @@ test('summarizes booth defaults with shelf quantity and TV size', () => {
 
   assert.ok(
     createAccessorySummaryItems(tvAccessories, tvSettings).includes(
-      '55in TV - Size: 55in - No graphic uploaded',
+      'TV - Size: 55in - No graphic uploaded',
     ),
   )
 })
@@ -68,8 +68,8 @@ test('summarizes manual counters, shelves, multiple TVs, and graphics', () => {
     'Storage Counter - 1 - Graphic uploaded',
     'Slim Counter - 1 - No graphic uploaded',
     'Shelf - Quantity: 4',
-    '55in TV #1 - Size: 55in - Graphic uploaded',
-    '55in TV #2 - Size: 65in - No graphic uploaded',
+    'TV #1 - Size: 55in - Graphic uploaded',
+    'TV #2 - Size: 65in - No graphic uploaded',
   ])
 })
 

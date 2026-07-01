@@ -553,6 +553,17 @@ dd {
   padding: 10px;
 }
 
+.add-on-limit-message {
+  border: 1px solid #f3c27a;
+  border-radius: 6px;
+  background: #fff8e8;
+  padding: 9px 10px;
+  color: #8a4b08;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
 .add-on-option-control {
   display: grid;
   gap: 6px;
@@ -879,6 +890,20 @@ dd {
   font-size: 11px;
 }
 
+.graphic-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.graphic-upload-zone:hover,
+.graphic-upload-zone:focus-within,
+.graphic-upload-zone:focus-visible {
+  border-color: var(--sourceone-blue);
+  box-shadow: 0 0 0 2px rgba(33, 70, 112, 0.14);
+  outline: none;
+}
+
 .reset-button {
   display: inline-flex;
   width: 100%;
@@ -1133,5 +1158,11 @@ dd {
 
   .modal-heading h1 {
     font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .graphic-upload-grid {
+    grid-template-columns: 1fr;
   }
 }

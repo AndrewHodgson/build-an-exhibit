@@ -405,6 +405,10 @@ export async function buildBoothSummaryPdf({
     ['Carpet / Flooring', flooring.label],
     ['Backwall Graphic', formatGraphicStatus(graphicUploads.backwall)],
     ['Counter Graphic', formatGraphicStatus(graphicUploads.counter)],
+    [
+      'Add-Ons / Furniture',
+      accessorySummaryItems.length ? accessorySummaryItems.join('\n') : 'None',
+    ],
   ]
   const labelWidth = 118
   const valueWidth = contentWidth - labelWidth
@@ -413,56 +417,6 @@ export async function buildBoothSummaryPdf({
   detailRows.forEach(([label, value]) => {
     rowY +=
       addDetailRow(doc, `${label}:`, value, margin, rowY, labelWidth, valueWidth) + 2
-  })
-
-  const summaryItems = accessorySummaryItems.length ? accessorySummaryItems : ['None']
-  const footerLimit = pageHeight - 65
-  let summaryY = rowY + 20
-
-  function addSummaryHeading(isContinuation = false) {
-    doc.setDrawColor(217, 222, 231)
-    doc.line(margin, summaryY - 14, pageWidth - margin, summaryY - 14)
-    doc.setTextColor(17, 24, 39)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(12)
-    doc.text(
-      `Add-Ons / Furniture${isContinuation ? ' (continued)' : ''}`,
-      margin,
-      summaryY,
-    )
-    summaryY += 21
-  }
-
-  function continueSummaryOnNewPage() {
-    doc.addPage()
-    summaryY = 48
-    addSummaryHeading(true)
-  }
-
-  if (summaryY + 34 > footerLimit) {
-    continueSummaryOnNewPage()
-  } else {
-    addSummaryHeading()
-  }
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.8)
-  doc.setTextColor(55, 65, 81)
-
-  summaryItems.forEach((item) => {
-    const lines = doc.splitTextToSize(item, contentWidth - 14)
-    const itemHeight = Math.max(14, lines.length * 10 + 4)
-
-    if (summaryY + itemHeight > footerLimit) {
-      continueSummaryOnNewPage()
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8.8)
-      doc.setTextColor(55, 65, 81)
-    }
-
-    doc.text('-', margin + 2, summaryY)
-    doc.text(lines, margin + 14, summaryY)
-    summaryY += itemHeight
   })
 
   const pageCount = doc.getNumberOfPages()

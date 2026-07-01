@@ -43,9 +43,6 @@ export default function WelcomeModal({
           <h1 id="welcome-title">
             {step === 1 ? 'Choose your exhibit footprint' : 'Choose a rental layout'}
           </h1>
-          <p>
-            Start with a BeMatrix rental exhibit size and one of the starter layouts.
-          </p>
         </div>
 
         {step === 1 && (

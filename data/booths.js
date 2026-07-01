@@ -22,6 +22,7 @@ export const boothSizes = [
 const BM101_MODEL_PATH = '/models/booths/bm101.glb'
 const INCLUDED_COUNTER = {
   id: 'included-bm-counter',
+  limitGroup: 'counter',
   name: 'Reception counter',
   type: 'included-accessory',
   modelPath: '/models/accessories/bm-counter.glb',

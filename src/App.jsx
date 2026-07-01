@@ -2,29 +2,29 @@ import { useProgress } from '@react-three/drei'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addOns,
-  ACCESSORY_ROTATION_STEP,
   createDefaultAddOnInstances,
   createDefaultAddOnSettings,
   createManualAddOnInstance,
   getActiveAccessories,
   getAddOnById,
-  INCHES_TO_METERS,
 } from '../data/addOns.js'
 import { boothSizes, getBoothsBySize, getDefaultBooth } from '../data/booths.js'
 import { defaultFlooringId, getFlooringById } from '../data/flooring.js'
+import { sceneAddOnLimits } from '../data/sceneConfig.js'
 import {
   createEmptyGraphicState,
   getGraphicZonesForBooth,
 } from '../data/graphicZones.js'
 import CanvasScene from './components/CanvasScene.jsx'
-import CounterPlacementControls from './components/CounterPlacementControls.jsx'
 import CropModal from './components/CropModal.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import WelcomeModal from './components/WelcomeModal.jsx'
 import { createBoothSummaryPdf } from './utils/exportPdf.js'
 
 const ASPECT_RATIO_TOLERANCE = 0.01
-const ACCESSORY_MOVE_STEP = 0.5 * INCHES_TO_METERS
+const FEET_TO_METERS = 0.3048
+const HORIZONTAL_PLACEMENT_LIMIT = 25 * FEET_TO_METERS
+const VERTICAL_PLACEMENT_LIMIT = 25 * FEET_TO_METERS
 const HISTORY_LIMIT = 10
 
 function LoadingOverlay({ isBusy = false, busyLabel = '' }) {
@@ -126,6 +126,43 @@ function formatPositionCoordinate(value) {
   return (Object.is(rounded, -0) ? 0 : rounded).toFixed(2)
 }
 
+function formatRotation(rotation = 0) {
+  const degrees = (rotation * 180) / Math.PI
+  return `${(Math.round(degrees * 10) / 10).toFixed(1)}\u00b0`
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum)
+}
+
+function clampAccessoryPosition(position) {
+  return [
+    clamp(position[0], -HORIZONTAL_PLACEMENT_LIMIT, HORIZONTAL_PLACEMENT_LIMIT),
+    clamp(position[1], 0, VERTICAL_PLACEMENT_LIMIT),
+    clamp(position[2], -HORIZONTAL_PLACEMENT_LIMIT, HORIZONTAL_PLACEMENT_LIMIT),
+  ]
+}
+
+function getAddOnLimitMessage(addOn, activeSceneAddOns) {
+  if (activeSceneAddOns.length >= sceneAddOnLimits.total) {
+    return 'Limit reached. Remove an item before adding another.'
+  }
+
+  const groupConfig = sceneAddOnLimits.groups[addOn.limitGroup]
+
+  if (!groupConfig) {
+    return ''
+  }
+
+  const groupCount = activeSceneAddOns.filter(
+    (sceneAddOn) => sceneAddOn.limitGroup === addOn.limitGroup,
+  ).length
+
+  return groupCount >= groupConfig.limit
+    ? `${groupConfig.label} limit reached. Remove a ${groupConfig.label.toLowerCase()} before adding another.`
+    : ''
+}
+
 export default function App() {
   const defaultBooth = getDefaultBooth()
   const initialAddOnInstances = createDefaultAddOnInstances(defaultBooth)
@@ -154,6 +191,7 @@ export default function App() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [exportStatus, setExportStatus] = useState('')
+  const [addOnLimitMessage, setAddOnLimitMessage] = useState('')
   const ownedGraphicUrlsRef = useRef(new Set())
   const historyRef = useRef([])
   const isTransformingAccessoryRef = useRef(false)
@@ -210,6 +248,7 @@ export default function App() {
       selectedSize,
     ],
   )
+  const [highlightedGraphicZoneId, setHighlightedGraphicZoneId] = useState(null)
 
   const recordHistory = useCallback(() => {
     historyRef.current = [...historyRef.current, createHistorySnapshot()].slice(
@@ -464,7 +503,15 @@ export default function App() {
       return
     }
 
+    const limitMessage = getAddOnLimitMessage(addOn, activeAccessories)
+
+    if (limitMessage) {
+      setAddOnLimitMessage(limitMessage)
+      return
+    }
+
     recordHistory()
+    setAddOnLimitMessage('')
 
     const instanceId = `manual-${addOnId}-${nextAddOnInstanceId.current}`
     nextAddOnInstanceId.current += 1
@@ -505,6 +552,7 @@ export default function App() {
     }
 
     recordHistory()
+    setAddOnLimitMessage('')
 
     if (!addOnInstances.some((instance) => instance.id === instanceId)) {
       setHiddenAccessoryIds((currentIds) => [...currentIds, instanceId])
@@ -573,34 +621,16 @@ export default function App() {
 
       return {
         ...currentPlacements,
-        [accessoryId]: updater(currentPlacement),
+        [accessoryId]: (() => {
+          const nextPlacement = updater(currentPlacement)
+
+          return {
+            ...nextPlacement,
+            position: clampAccessoryPosition(nextPlacement.position),
+          }
+        })(),
       }
     })
-  }
-
-  function updateSelectedAccessoryPlacement(updater) {
-    if (selectedAccessory) {
-      updateAccessoryPlacement(selectedAccessory.id, updater)
-    }
-  }
-
-  function moveAccessory(direction) {
-    const deltas = {
-      left: [-ACCESSORY_MOVE_STEP, 0],
-      right: [ACCESSORY_MOVE_STEP, 0],
-      forward: [0, ACCESSORY_MOVE_STEP],
-      back: [0, -ACCESSORY_MOVE_STEP],
-    }
-    const [deltaX, deltaZ] = deltas[direction] ?? [0, 0]
-
-    updateSelectedAccessoryPlacement((currentPlacement) => ({
-      ...currentPlacement,
-      position: [
-        currentPlacement.position[0] + deltaX,
-        currentPlacement.position[1],
-        currentPlacement.position[2] + deltaZ,
-      ],
-    }))
   }
 
   function transformAccessoryPosition(accessoryId, position) {
@@ -610,47 +640,11 @@ export default function App() {
     }), false)
   }
 
-  function rotateAccessoryById(accessoryId, direction) {
-    const deltaY =
-      direction === 'clockwise' ? -ACCESSORY_ROTATION_STEP : ACCESSORY_ROTATION_STEP
-
-    updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
-      ...currentPlacement,
-      rotation: [
-        currentPlacement.rotation[0],
-        currentPlacement.rotation[1] + deltaY,
-        currentPlacement.rotation[2],
-      ],
-    }))
-  }
-
   function setAccessoryRotation(accessoryId, rotation) {
     updateAccessoryPlacement(accessoryId, (currentPlacement) => ({
       ...currentPlacement,
       rotation,
     }), false)
-  }
-
-  function rotateAccessory(direction) {
-    if (selectedAccessory) {
-      rotateAccessoryById(selectedAccessory.id, direction)
-    }
-  }
-
-  function resetAccessoryPlacement() {
-    if (!selectedAccessory) {
-      return
-    }
-
-    recordHistory()
-
-    setAccessoryPlacements((currentPlacements) => ({
-      ...currentPlacements,
-      [selectedAccessory.id]: {
-        position: [...selectedAccessory.position],
-        rotation: [...selectedAccessory.rotation],
-      },
-    }))
   }
 
   async function exportPdf() {
@@ -739,6 +733,7 @@ export default function App() {
           booth={selectedBooth}
           flooring={selectedFlooring}
           graphicUploads={graphicUploads}
+          highlightedGraphicZoneId={highlightedGraphicZoneId}
           accessories={activeAccessories}
           accessoryPlacements={accessoryPlacements}
           addOnSettings={addOnSettings}
@@ -777,19 +772,11 @@ export default function App() {
           <span>X: {formatPositionCoordinate(selectedAccessoryPlacement.position[0])}</span>
           <span>Y: {formatPositionCoordinate(selectedAccessoryPlacement.position[2])}</span>
           <span>Z: {formatPositionCoordinate(selectedAccessoryPlacement.position[1])}</span>
+          <span>
+            Rotation: {formatRotation(selectedAccessoryPlacement.rotation[1])}
+          </span>
         </output>
       )}
-
-      {selectedAccessory &&
-        !isWelcomeOpen &&
-        !isExportingPdf && (
-          <CounterPlacementControls
-            accessoryName={selectedAccessory.name}
-            onMove={moveAccessory}
-            onRotate={rotateAccessory}
-            onReset={resetAccessoryPlacement}
-          />
-        )}
 
       <RightPanel
         boothSizes={boothSizes}
@@ -800,6 +787,7 @@ export default function App() {
         addOns={addOns}
         selectedAccessoryId={selectedAccessoryId}
         addOnSettings={addOnSettings}
+        addOnLimitMessage={addOnLimitMessage}
         selectedFlooringId={selectedFlooring.id}
         graphicZones={graphicZones}
         graphicUploads={graphicUploads}
@@ -818,6 +806,7 @@ export default function App() {
         }}
         onGraphicFileChange={handleGraphicFile}
         onGraphicClear={clearGraphicUpload}
+        onGraphicHighlightChange={setHighlightedGraphicZoneId}
         onExportPdf={exportPdf}
         onResetBooth={resetCurrentBooth}
         isExportingPdf={isExportingPdf}
