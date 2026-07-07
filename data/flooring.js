@@ -77,21 +77,29 @@ export const premiumFlooringOptions = [
     label: 'Wintergreen Carpet',
     texturePath: '/textures/carpet/Premium_Wintergreen_Carpet.jpg',
   },
+]
+
+export const vinylFlooringOptions = [
   {
     id: 'premium-walnut-flooring',
-    label: 'Walnut Flooring',
+    label: 'Walnut Vinyl',
     texturePath: '/textures/carpet/Premium_Walnut_Flooring.jpg',
+    textureRepeatMultiplier: 2,
+    textureRotationDegrees: 90,
   },
   {
     id: 'premium-weathered-flooring',
-    label: 'Weathered Flooring',
+    label: 'Weathered Vinyl',
     texturePath: '/textures/carpet/Premium_Weathered_Flooring.jpg',
+    textureRepeatMultiplier: 2,
+    textureRotationDegrees: 90,
   },
 ]
 
 export const flooringOptions = [
   ...standardFlooringOptions,
   ...premiumFlooringOptions,
+  ...vinylFlooringOptions,
 ]
 
 export const flooringTexturePreloadPaths = flooringOptions

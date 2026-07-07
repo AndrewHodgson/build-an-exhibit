@@ -27,6 +27,7 @@ import {
   SRGBColorSpace,
   TextureLoader,
   Vector3,
+  WebGLRenderTarget,
 } from 'three'
 import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
 import { glbMaterialColorOverrides } from '../../data/sceneConfig.js'
@@ -51,6 +52,8 @@ const SCENE_GRID_SIZE = 12
 const SCENE_GRID_DIVISIONS = 24
 const SCENE_GRID_Y = -FLOOR_THICKNESS - 0.006
 const EXPORT_BACKGROUND_COLOR = '#ffffff'
+const EXPORT_CAPTURE_WIDTH = 1600
+const EXPORT_CAPTURE_HEIGHT = 1000
 const reportedBoundsKeys = new Set()
 const defaultMaterialMaps = new WeakMap()
 const uploadedMaterialMaps = new WeakMap()
@@ -170,12 +173,6 @@ function SceneGrid() {
   )
 }
 
-function waitForAnimationFrame() {
-  return new Promise((resolve) => {
-    requestAnimationFrame(resolve)
-  })
-}
-
 function getExportCameraViews(boothSize) {
   const isWide = boothSize === '10x20'
 
@@ -209,7 +206,6 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const controls = useThree((state) => state.controls)
-  const invalidate = useThree((state) => state.invalidate)
 
   useImperativeHandle(
     captureRef,
@@ -223,13 +219,27 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
         const originalClearColor = gl.getClearColor(new Color()).clone()
         const originalClearAlpha = gl.getClearAlpha()
         const originalRenderTarget = gl.getRenderTarget()
-        const captureWidth = gl.domElement.width
-        const captureHeight = gl.domElement.height
-        const captureAspect = captureWidth / captureHeight
+        const captureAspect = EXPORT_CAPTURE_WIDTH / EXPORT_CAPTURE_HEIGHT
+        const renderTarget = new WebGLRenderTarget(
+          EXPORT_CAPTURE_WIDTH,
+          EXPORT_CAPTURE_HEIGHT,
+        )
+        renderTarget.texture.colorSpace = SRGBColorSpace
+        const pixelBuffer = new Uint8Array(
+          EXPORT_CAPTURE_WIDTH * EXPORT_CAPTURE_HEIGHT * 4,
+        )
+        const exportCanvas = document.createElement('canvas')
+        exportCanvas.width = EXPORT_CAPTURE_WIDTH
+        exportCanvas.height = EXPORT_CAPTURE_HEIGHT
+        const exportContext = exportCanvas.getContext('2d')
         const gridHelpers = []
         const captures = []
 
         try {
+          if (!exportContext) {
+            throw new Error('Unable to create the PDF export canvas context.')
+          }
+
           scene.traverse((object) => {
             if (object.type === 'GridHelper') {
               gridHelpers.push({
@@ -240,7 +250,7 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
             }
           })
 
-          gl.setRenderTarget(null)
+          gl.setRenderTarget(renderTarget)
           gl.setClearColor(EXPORT_BACKGROUND_COLOR, 1)
           camera.aspect = captureAspect
           camera.updateProjectionMatrix()
@@ -256,23 +266,47 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
               controls.update()
             }
 
-            invalidate()
-            await waitForAnimationFrame()
-            gl.setRenderTarget(null)
+            gl.setRenderTarget(renderTarget)
             gl.clear(true, true, true)
             gl.render(scene, camera)
+            gl.readRenderTargetPixels(
+              renderTarget,
+              0,
+              0,
+              EXPORT_CAPTURE_WIDTH,
+              EXPORT_CAPTURE_HEIGHT,
+              pixelBuffer,
+            )
+
+            const imageData = exportContext.createImageData(
+              EXPORT_CAPTURE_WIDTH,
+              EXPORT_CAPTURE_HEIGHT,
+            )
+            const rowLength = EXPORT_CAPTURE_WIDTH * 4
+
+            // WebGL pixels start at the bottom-left; canvas image data starts at
+            // the top-left, so copy the rows in reverse order.
+            for (let y = 0; y < EXPORT_CAPTURE_HEIGHT; y += 1) {
+              const sourceStart =
+                (EXPORT_CAPTURE_HEIGHT - y - 1) * rowLength
+              imageData.data.set(
+                pixelBuffer.subarray(sourceStart, sourceStart + rowLength),
+                y * rowLength,
+              )
+            }
+            exportContext.putImageData(imageData, 0, 0)
 
             captures.push({
               id: view.id,
               label: view.label,
-              width: gl.domElement.width,
-              height: gl.domElement.height,
-              dataUrl: gl.domElement.toDataURL('image/jpeg', 0.92),
+              width: EXPORT_CAPTURE_WIDTH,
+              height: EXPORT_CAPTURE_HEIGHT,
+              dataUrl: exportCanvas.toDataURL('image/jpeg', 0.92),
             })
 
             if (import.meta.env.DEV) {
               console.info(
-                `PDF capture ${view.id}: live canvas ${gl.domElement.width}x${gl.domElement.height}, ` +
+                `PDF capture ${view.id}: offscreen ${EXPORT_CAPTURE_WIDTH}x${EXPORT_CAPTURE_HEIGHT}, ` +
                   `camera aspect ${Number(camera.aspect.toFixed(4))}`,
               )
             }
@@ -282,39 +316,56 @@ function SceneCaptureBridge({ boothSize, captureRef }) {
           camera.quaternion.copy(originalQuaternion)
           camera.up.copy(originalUp)
           camera.aspect = originalAspect
-          camera.updateProjectionMatrix()
 
           if (controls?.target && originalTarget) {
             controls.target.copy(originalTarget)
             controls.update()
           }
 
+          // OrbitControls.update() recomputes camera orientation. Restore the
+          // exact saved camera transform after syncing its target.
+          camera.position.copy(originalPosition)
+          camera.quaternion.copy(originalQuaternion)
+          camera.up.copy(originalUp)
+          camera.aspect = originalAspect
+          camera.updateProjectionMatrix()
+          camera.updateMatrixWorld(true)
+
           gridHelpers.forEach(({ object, visible }) => {
             object.visible = visible
           })
           gl.setRenderTarget(originalRenderTarget)
           gl.setClearColor(originalClearColor, originalClearAlpha)
-          invalidate()
-          await waitForAnimationFrame()
-          gl.render(scene, camera)
+          renderTarget.dispose()
         }
 
         return captures
       },
     }),
-    [boothSize, camera, controls, gl, invalidate, scene],
+    [boothSize, camera, controls, gl, scene],
   )
 
   return null
 }
 
-function createFloorTexture(baseTexture, repeatX, repeatY) {
+function createFloorTexture(
+  baseTexture,
+  repeatX,
+  repeatY,
+  repeatMultiplier = 1,
+  rotationDegrees = 0,
+) {
   const nextTexture = baseTexture.clone()
 
   nextTexture.colorSpace = SRGBColorSpace
   nextTexture.wrapS = RepeatWrapping
   nextTexture.wrapT = RepeatWrapping
-  nextTexture.repeat.set(repeatX, repeatY)
+  nextTexture.repeat.set(
+    repeatX * repeatMultiplier,
+    repeatY * repeatMultiplier,
+  )
+  nextTexture.center.set(0.5, 0.5)
+  nextTexture.rotation = (rotationDegrees * Math.PI) / 180
   nextTexture.needsUpdate = true
 
   return nextTexture
@@ -329,14 +380,40 @@ function ExhibitFloor({ boothSize, flooring, hideGrid = false }) {
   )
   const repeatX = widthFeet / 10
   const repeatZ = depthFeet / 10
+  const repeatMultiplier = flooring.textureRepeatMultiplier ?? 1
+  const rotationDegrees = flooring.textureRotationDegrees ?? 0
   const floorTextures = useMemo(
     () => ({
-      top: createFloorTexture(texture, repeatX, repeatZ),
-      bottom: createFloorTexture(texture, repeatX, repeatZ),
-      widthEdge: createFloorTexture(texture, repeatX, 1),
-      depthEdge: createFloorTexture(texture, repeatZ, 1),
+      top: createFloorTexture(
+        texture,
+        repeatX,
+        repeatZ,
+        repeatMultiplier,
+        rotationDegrees,
+      ),
+      bottom: createFloorTexture(
+        texture,
+        repeatX,
+        repeatZ,
+        repeatMultiplier,
+        rotationDegrees,
+      ),
+      widthEdge: createFloorTexture(
+        texture,
+        repeatX,
+        1,
+        repeatMultiplier,
+        rotationDegrees,
+      ),
+      depthEdge: createFloorTexture(
+        texture,
+        repeatZ,
+        1,
+        repeatMultiplier,
+        rotationDegrees,
+      ),
     }),
-    [repeatX, repeatZ, texture],
+    [repeatMultiplier, repeatX, repeatZ, rotationDegrees, texture],
   )
   const floorMaterials = useMemo(() => {
     const materialSettings = {

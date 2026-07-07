@@ -3,6 +3,7 @@ import { addOnCategories } from '../../data/addOns.js'
 import {
   premiumFlooringOptions,
   standardFlooringOptions,
+  vinylFlooringOptions,
 } from '../../data/flooring.js'
 import SourceOneLogo from './SourceOneLogo.jsx'
 
@@ -591,11 +592,21 @@ export default function RightPanel({
               />
             </PanelSubsection>
 
-            <PanelSubsection title="Premium Carpet & Flooring">
+            <PanelSubsection title="Premium Carpet">
               <TextureSwatches
-                label="Premium Carpet & Flooring"
+                label="Premium Carpet"
                 value={selectedFlooringId}
                 options={premiumFlooringOptions}
+                showLabel={false}
+                onChange={onFlooringChange}
+              />
+            </PanelSubsection>
+
+            <PanelSubsection title="Vinyl Flooring">
+              <TextureSwatches
+                label="Vinyl Flooring"
+                value={selectedFlooringId}
+                options={vinylFlooringOptions}
                 showLabel={false}
                 onChange={onFlooringChange}
               />
