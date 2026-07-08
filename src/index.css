@@ -249,7 +249,9 @@ dd {
 }
 
 .panel-brand {
-  max-width: 190px;
+  display: flex;
+  max-width: none;
+  justify-content: center;
 }
 
 .right-panel {
@@ -270,9 +272,10 @@ dd {
 }
 
 .panel-header {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 14px;
   margin-bottom: 14px;
 }
@@ -733,6 +736,19 @@ dd {
   font-weight: 500;
 }
 
+.contact-note {
+  display: block;
+  color: #525252;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.contact-note a {
+  color: var(--sourceone-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .texture-swatch-group {
   display: grid;
   gap: 8px;
@@ -1158,6 +1174,9 @@ dd {
   }
 
   .close-button {
+    position: absolute;
+    top: 0;
+    right: 0;
     display: inline-flex;
     min-height: 36px;
     cursor: pointer;

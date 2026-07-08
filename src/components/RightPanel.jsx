@@ -669,6 +669,7 @@ export default function RightPanel({
             </svg>
             Reset Booth
           </button>
+          <p>© 2026 SourceOne Events. All rights reserved.</p>
         </footer>
       </aside>
     </>
