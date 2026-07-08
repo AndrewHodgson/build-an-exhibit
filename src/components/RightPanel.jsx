@@ -5,6 +5,7 @@ import {
   standardFlooringOptions,
   vinylFlooringOptions,
 } from '../../data/flooring.js'
+import { getPublicAssetUrl } from '../utils/publicAssetPath.js'
 import SourceOneLogo from './SourceOneLogo.jsx'
 
 function Section({ id, title, openSectionId, onOpen, children }) {
@@ -58,7 +59,7 @@ function LayoutCards({ booths, selectedBooth, onBoothChange }) {
           onClick={() => onBoothChange(booth.id)}
         >
           <span className="layout-thumb" aria-hidden="true">
-            <img src={booth.thumbnailPath} alt="" />
+            <img src={getPublicAssetUrl(booth.thumbnailPath)} alt="" />
           </span>
           <span className="layout-copy">
             <span className="layout-code">{booth.code}</span>
@@ -122,7 +123,7 @@ function AddOnCards({
                 >
                   <div className="add-on-card-main">
                     <span className="layout-thumb" aria-hidden="true">
-                      <img src={addOn.thumbnailPath} alt="" />
+                      <img src={getPublicAssetUrl(addOn.thumbnailPath)} alt="" />
                     </span>
                     <span className="layout-copy">
                       <span className="layout-code">{addOn.name}</span>
@@ -236,7 +237,7 @@ function TextureSwatches({ label, value, options, onChange, showLabel = true }) 
               title={option.label}
               aria-label={`${label}: ${option.label}`}
               className={`texture-swatch ${isSelected ? 'is-selected' : ''}`}
-              style={{ backgroundImage: `url(${option.texturePath})` }}
+              style={{ backgroundImage: `url(${getPublicAssetUrl(option.texturePath)})` }}
               onClick={() => onChange(option.id)}
             />
           )

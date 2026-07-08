@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { getBoothsBySize } from '../../data/booths.js'
+import { getPublicAssetUrl } from '../utils/publicAssetPath.js'
 import SourceOneLogo from './SourceOneLogo.jsx'
 
 export default function WelcomeModal({
@@ -55,7 +56,7 @@ export default function WelcomeModal({
                 onClick={() => chooseSize(size.value)}
               >
                 <span className="choice-preview footprint-preview">
-                  <img src={size.featuredImagePath} alt="" />
+                  <img src={getPublicAssetUrl(size.featuredImagePath)} alt="" />
                 </span>
                 <span className="choice-title">{size.label} Rental Exhibits</span>
               </button>
@@ -77,7 +78,7 @@ export default function WelcomeModal({
                     onClick={() => chooseBooth(booth.id)}
                   >
                     <span className="choice-preview booth-preview">
-                      <img src={booth.thumbnailPath} alt="" />
+                      <img src={getPublicAssetUrl(booth.thumbnailPath)} alt="" />
                     </span>
                     <span className="choice-title">{booth.name}</span>
                   </button>

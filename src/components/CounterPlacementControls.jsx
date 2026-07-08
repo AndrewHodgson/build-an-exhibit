@@ -1,3 +1,5 @@
+import { getPublicAssetUrl } from '../utils/publicAssetPath.js'
+
 function ControllerButton({ className, label, onClick }) {
   return (
     <button
@@ -26,7 +28,7 @@ export default function CounterPlacementControls({ accessoryName, onMove, onRota
         Drag arrows to move one axis. Drag the ring to rotate.
       </p>
       <img
-        src="/controller.svg"
+        src={getPublicAssetUrl('/controller.svg')}
         alt=""
         className="counter-controller-art"
         draggable="false"

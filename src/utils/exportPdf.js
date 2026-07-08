@@ -1,4 +1,6 @@
-const LOGO_PATH = '/images/SourceOne-Logo-RGB.svg'
+import { getPublicAssetUrl } from './publicAssetPath.js'
+
+const LOGO_PATH = getPublicAssetUrl('/images/SourceOne-Logo-RGB.svg')
 
 function findCapture(captures, id) {
   return captures.find((capture) => capture.id === id)

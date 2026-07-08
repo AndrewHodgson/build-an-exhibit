@@ -32,6 +32,7 @@ import {
 import { ACCESSORY_ROTATION_STEP } from '../../data/addOns.js'
 import { glbMaterialColorOverrides } from '../../data/sceneConfig.js'
 import { getAccessoryVerticalMinY } from '../utils/placementBounds.js'
+import { getPublicAssetUrl } from '../utils/publicAssetPath.js'
 import AccessoryTransformGizmo from './AccessoryTransformGizmo.jsx'
 
 const CAMERA_TARGET = [0, 1, 0]
@@ -95,7 +96,7 @@ function SceneLights() {
   )
 }
 
-const ENVIRONMENT_HDRI_PATH = '/HDR/dancing_hall_1k.hdr'
+const ENVIRONMENT_HDRI_PATH = getPublicAssetUrl('/HDR/dancing_hall_1k.hdr')
 // The HDRI is used purely as image-based lighting so PBR metals get real
 // reflections. `background` stays false so the app background is unchanged, and
 // a sub-1 intensity keeps the polished metal from blowing out.
@@ -373,7 +374,7 @@ function createFloorTexture(
 
 function ExhibitFloor({ boothSize, flooring, hideGrid = false }) {
   const floorRef = useRef(null)
-  const texture = useTexture(flooring.texturePath)
+  const texture = useTexture(getPublicAssetUrl(flooring.texturePath))
   const { width, depth, widthFeet, depthFeet } = useMemo(
     () => getFloorDimensions(boothSize),
     [boothSize],
@@ -660,7 +661,7 @@ function applyGraphicTextures(scene, graphicTextureUrls, invalidate) {
       }
 
       const pendingLoad = loader
-        .loadAsync(textureUrl)
+        .loadAsync(getPublicAssetUrl(textureUrl))
         .then((texture) => {
           if (!isActive) {
             texture.dispose()
@@ -912,7 +913,7 @@ function applyAccessoryMaterialOption(
   const loader = new TextureLoader()
 
   loader
-    .loadAsync(option.texturePath)
+    .loadAsync(getPublicAssetUrl(option.texturePath))
     .then((texture) => {
       if (!isActive) {
         texture.dispose()
@@ -1083,7 +1084,8 @@ function LoadedModel({
   highlightedMaterialName,
   onBoundsChange,
 }) {
-  const { scene } = useGLTF(modelPath)
+  const resolvedModelPath = getPublicAssetUrl(modelPath)
+  const { scene } = useGLTF(resolvedModelPath)
   const modelScene = useMemo(() => cloneModelScene(scene), [scene])
   const invalidate = useThree((state) => state.invalidate)
   const isRenderable = useMemo(() => hasRenderableGeometry(modelScene), [modelScene])
